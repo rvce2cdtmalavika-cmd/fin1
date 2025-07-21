@@ -571,8 +571,8 @@ export default function SupplyChainApp() {
                       </Marker>
                     ))}
                     
-                    {edges.map((edge) => (
-                      edge.route && (
+                    {edges.map((edge) => 
+                      edge.route ? (
                         <Polyline
                           key={edge.id}
                           positions={edge.route}
@@ -580,8 +580,8 @@ export default function SupplyChainApp() {
                           weight={3}
                           opacity={0.7}
                         />
-                      )
-                    ))}
+                      ) : null
+                    )}
                   </MapContainer>
                 </div>
                 
