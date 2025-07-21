@@ -7,7 +7,7 @@ All colors MUST be HSL.
 */
 
 @layer base {
-  :root {
+:root {
     --background: 0 0% 100%;
     --foreground: 222.2 84% 4.9%;
 
@@ -17,16 +17,18 @@ All colors MUST be HSL.
     --popover: 0 0% 100%;
     --popover-foreground: 222.2 84% 4.9%;
 
-    --primary: 222.2 47.4% 11.2%;
+    /* Supply Chain Theme Colors */
+    --primary: 210 100% 50%; /* Bright Blue for logistics */
     --primary-foreground: 210 40% 98%;
+    --primary-glow: 210 100% 70%;
 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 142 71% 45%; /* Green for efficiency */
+    --secondary-foreground: 210 40% 98%;
 
     --muted: 210 40% 96.1%;
     --muted-foreground: 215.4 16.3% 46.9%;
 
-    --accent: 210 40% 96.1%;
+    --accent: 39 100% 50%; /* Orange for alerts/warnings */
     --accent-foreground: 222.2 47.4% 11.2%;
 
     --destructive: 0 84.2% 60.2%;
@@ -34,7 +36,25 @@ All colors MUST be HSL.
 
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
+    --ring: 210 100% 50%;
+
+    /* Custom Supply Chain Variables */
+    --cold-chain: 195 100% 50%; /* Cyan for cold storage */
+    --transport: 45 100% 50%; /* Amber for transport */
+    --warehouse: 270 50% 40%; /* Purple for warehouses */
+    --retail: 120 100% 25%; /* Dark green for retail */
+
+    /* Gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary-glow)));
+    --gradient-cold: linear-gradient(135deg, hsl(var(--cold-chain)), hsl(195 100% 70%));
+    --gradient-warm: linear-gradient(135deg, hsl(var(--transport)), hsl(45 100% 70%));
+
+    /* Shadows */
+    --shadow-logistics: 0 10px 30px -10px hsl(var(--primary) / 0.3);
+    --shadow-glow: 0 0 40px hsl(var(--primary-glow) / 0.4);
+
+    /* Map specific styles */
+    --map-height: 500px;
 
     --radius: 0.5rem;
 
@@ -101,5 +121,60 @@ All colors MUST be HSL.
 
   body {
     @apply bg-background text-foreground;
+  }
+
+  /* Custom supply chain map icons */
+  .custom-div-icon {
+    background: transparent !important;
+    border: none !important;
+  }
+
+  /* Map specific styles */
+  .leaflet-container {
+    font-family: inherit;
+  }
+
+  .leaflet-popup-content-wrapper {
+    border-radius: 8px;
+  }
+
+  .leaflet-popup-content {
+    margin: 8px 12px;
+    line-height: 1.4;
+  }
+
+  /* Supply chain specific animations */
+  @keyframes pulse-supply {
+    0%, 100% {
+      opacity: 1;
+      transform: scale(1);
+    }
+    50% {
+      opacity: 0.8;
+      transform: scale(1.05);
+    }
+  }
+
+  .supply-chain-marker {
+    animation: pulse-supply 2s infinite;
+  }
+
+  /* Route visualization styles */
+  .route-optimal {
+    stroke: hsl(var(--secondary));
+    stroke-width: 4;
+    stroke-dasharray: none;
+  }
+
+  .route-suboptimal {
+    stroke: hsl(var(--transport));
+    stroke-width: 2;
+    stroke-dasharray: 5, 5;
+  }
+
+  .route-critical {
+    stroke: hsl(var(--destructive));
+    stroke-width: 3;
+    stroke-dasharray: 10, 5;
   }
 }

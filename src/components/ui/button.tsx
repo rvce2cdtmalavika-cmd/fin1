@@ -18,6 +18,11 @@ const buttonVariants = cva(
           "bg-secondary text-secondary-foreground hover:bg-secondary/80",
         ghost: "hover:bg-accent hover:text-accent-foreground",
         link: "text-primary underline-offset-4 hover:underline",
+        logistics: "bg-gradient-to-r from-primary to-primary-glow text-primary-foreground hover:shadow-lg hover:shadow-primary/25 transition-all duration-300",
+        cold: "bg-cold-chain text-white hover:bg-cold-chain/90",
+        transport: "bg-transport text-white hover:bg-transport/90",
+        warehouse: "bg-warehouse text-white hover:bg-warehouse/90",
+        retail: "bg-retail text-white hover:bg-retail/90",
       },
       size: {
         default: "h-10 px-4 py-2",
