@@ -169,7 +169,10 @@ class SupplyChainService {
   async saveOptimizationResult(result: Omit<OptimizationResult, 'id'>) {
     const { data, error } = await supabase
       .from('optimization_results')
-      .insert(result)
+      .insert({
+        ...result,
+        fish_type: result.fish_type as 'tilapia' | 'pomfret' | 'mackerel' | 'sardine' | 'tuna'
+      })
       .select()
       .single();
     
@@ -203,7 +206,10 @@ class SupplyChainService {
   async addDailyCatch(catchData: Omit<DailyCatch, 'id'>) {
     const { data, error } = await supabase
       .from('daily_catches')
-      .insert(catchData)
+      .insert({
+        ...catchData,
+        fish_type: catchData.fish_type as 'tilapia' | 'pomfret' | 'mackerel' | 'sardine' | 'tuna'
+      })
       .select()
       .single();
     

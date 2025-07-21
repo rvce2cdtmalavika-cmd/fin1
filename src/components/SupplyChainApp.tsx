@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -59,7 +58,6 @@ export default function SupplyChainApp() {
   return (
     <ErrorBoundary>
       <div className="min-h-screen bg-background">
-        {/* Header */}
         <header className="border-b bg-card">
           <div className="container mx-auto px-4 py-3 flex justify-between items-center">
             <div className="flex items-center gap-2">
@@ -86,7 +84,6 @@ export default function SupplyChainApp() {
         </header>
 
         <div className="container mx-auto p-4">
-          {/* Main Content */}
           <div className="mb-6">
             <h1 className="text-3xl font-bold mb-2 flex items-center gap-2">
               <Package className="h-8 w-8 text-primary" />
@@ -221,17 +218,17 @@ export default function SupplyChainApp() {
                       </div>
                     ) : dailyCatches.length > 0 ? (
                       <div className="space-y-3">
-                        {dailyCatches.slice(0, 5).map((catch: any) => (
-                          <div key={catch.id} className="flex justify-between items-center p-3 border rounded">
+                        {dailyCatches.slice(0, 5).map((catchItem) => (
+                          <div key={catchItem.id} className="flex justify-between items-center p-3 border rounded">
                             <div>
-                              <p className="font-medium">{catch.fish_type}</p>
+                              <p className="font-medium">{catchItem.fish_type}</p>
                               <p className="text-sm text-muted-foreground">
-                                {catch.ports?.name} - {new Date(catch.catch_date).toLocaleDateString()}
+                                {catchItem.ports?.name || 'Unknown Port'} - {new Date(catchItem.catch_date).toLocaleDateString()}
                               </p>
                             </div>
                             <div className="text-right">
-                              <p className="font-medium">{catch.volume_kg.toLocaleString()} kg</p>
-                              <p className="text-sm text-muted-foreground">{catch.quality_grade}</p>
+                              <p className="font-medium">{catchItem.volume_kg.toLocaleString()} kg</p>
+                              <p className="text-sm text-muted-foreground">{catchItem.quality_grade}</p>
                             </div>
                           </div>
                         ))}
@@ -312,13 +309,13 @@ export default function SupplyChainApp() {
                     </div>
                   ) : optimizationResults.length > 0 ? (
                     <div className="space-y-3">
-                      {optimizationResults.slice(0, 10).map((result: any) => (
+                      {optimizationResults.slice(0, 10).map((result) => (
                         <div key={result.id} className="p-4 border rounded-lg">
                           <div className="flex justify-between items-start mb-2">
                             <div>
                               <p className="font-medium">{result.fish_type}</p>
                               <p className="text-sm text-muted-foreground">
-                                {result.ports?.name} → {result.markets?.name}
+                                {result.ports?.name || 'Unknown Port'} → {result.markets?.name || 'Unknown Market'}
                               </p>
                             </div>
                             <Badge variant={result.net_profit > 0 ? "default" : "destructive"}>
