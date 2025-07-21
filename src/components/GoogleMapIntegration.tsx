@@ -41,10 +41,9 @@ export function GoogleMapIntegration({
   onLocationSelect, 
   existingLocations = [], 
   center = { lat: 12.9716, lng: 77.5946 }, // Bangalore center
-  zoom = 11 
+  zoom = 8 
 }: GoogleMapIntegrationProps) {
   const mapRef = useRef<HTMLDivElement>(null);
-  const searchInputRef = useRef<HTMLInputElement>(null);
   const [map, setMap] = useState<any>(null);
   const [searchService, setSearchService] = useState<any>(null);
   const [geocoder, setGeocoder] = useState<any>(null);
@@ -56,7 +55,7 @@ export function GoogleMapIntegration({
   const [manualCoords, setManualCoords] = useState({ lat: '', lng: '' });
   const { toast } = useToast();
 
-  // Load Google Maps API
+  // Load Google Maps API with your provided key
   useEffect(() => {
     if (window.google) {
       setIsApiLoaded(true);
@@ -64,7 +63,7 @@ export function GoogleMapIntegration({
     }
 
     const script = document.createElement('script');
-    script.src = `https://maps.googleapis.com/maps/api/js?key=YOUR_GOOGLE_MAPS_API_KEY&libraries=places&callback=initMap`;
+    script.src = `https://maps.googleapis.com/maps/api/js?key=AIzaSyBkR-LW8k3RE3yvVwUMfkXDIVWPwdlnkTA&libraries=places&callback=initMap`;
     script.async = true;
     script.defer = true;
     
@@ -75,7 +74,7 @@ export function GoogleMapIntegration({
     script.onerror = () => {
       toast({
         title: "Google Maps API Error",
-        description: "Please add your Google Maps API key to use this feature",
+        description: "Failed to load Google Maps API. Please check your internet connection.",
         variant: "destructive"
       });
     };
@@ -100,9 +99,14 @@ export function GoogleMapIntegration({
       mapTypeId: 'roadmap',
       styles: [
         {
-          featureType: 'all',
-          elementType: 'geometry.fill',
-          stylers: [{ color: '#f5f5f5' }]
+          featureType: 'poi',
+          elementType: 'labels',
+          stylers: [{ visibility: 'off' }]
+        },
+        {
+          featureType: 'road',
+          elementType: 'labels',
+          stylers: [{ visibility: 'simplified' }]
         }
       ]
     });
@@ -180,14 +184,14 @@ export function GoogleMapIntegration({
     setIsSearching(true);
     
     const request = {
-      query: `${query} Bangalore Karnataka India`,
+      query: `${query} Karnataka India`,
       fields: ['name', 'geometry', 'formatted_address', 'place_id']
     };
 
     searchService.textSearch(request, (results: any, status: any) => {
       setIsSearching(false);
       
-      if (status === window.google.maps.places.PlacesServiceStatus.OK) {
+      if (status === window.google.maps.places.PlacesServiceStatus.OK && results) {
         const locations = results.map((place: any) => ({
           name: place.name,
           lat: place.geometry.location.lat(),
@@ -198,10 +202,11 @@ export function GoogleMapIntegration({
         setSearchResults(locations.slice(0, 5));
       } else {
         toast({
-          title: "Search Error",
-          description: "No results found for your search",
-          variant: "destructive"
+          title: "Search Results",
+          description: "No results found for your search in Karnataka",
+          variant: "default"
         });
+        setSearchResults([]);
       }
     });
   }, [searchService, toast]);
@@ -279,7 +284,7 @@ export function GoogleMapIntegration({
           <Alert>
             <MapPin className="h-4 w-4" />
             <AlertDescription>
-              Loading Google Maps... Please ensure your Google Maps API key is configured.
+              Loading Google Maps for Karnataka dairy network...
             </AlertDescription>
           </Alert>
         </CardContent>
@@ -293,15 +298,14 @@ export function GoogleMapIntegration({
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <MapPin className="h-5 w-5" />
-            Location Search & Map
+            Karnataka Location Search & Network Builder
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           {/* Search Form */}
           <form onSubmit={handleSearchSubmit} className="flex gap-2">
             <Input
-              ref={searchInputRef}
-              placeholder="Search for dairy farms, processing plants, markets..."
+              placeholder="Search for dairy farms, processing plants, markets in Karnataka..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="flex-1"
@@ -314,12 +318,12 @@ export function GoogleMapIntegration({
           {/* Manual Coordinates Input */}
           <div className="grid grid-cols-3 gap-2">
             <Input
-              placeholder="Latitude"
+              placeholder="Latitude (12.9716)"
               value={manualCoords.lat}
               onChange={(e) => setManualCoords(prev => ({ ...prev, lat: e.target.value }))}
             />
             <Input
-              placeholder="Longitude"
+              placeholder="Longitude (77.5946)"
               value={manualCoords.lng}
               onChange={(e) => setManualCoords(prev => ({ ...prev, lng: e.target.value }))}
             />
@@ -331,7 +335,7 @@ export function GoogleMapIntegration({
           {/* Search Results */}
           {searchResults.length > 0 && (
             <div className="space-y-2">
-              <Label>Search Results:</Label>
+              <Label>Search Results in Karnataka:</Label>
               {searchResults.map((result, index) => (
                 <div
                   key={index}
@@ -358,7 +362,7 @@ export function GoogleMapIntegration({
                 </div>
                 <Button onClick={confirmLocation} size="sm">
                   <Plus className="h-4 w-4 mr-2" />
-                  Add Location
+                  Add to Network
                 </Button>
               </div>
             </div>
@@ -380,8 +384,8 @@ export function GoogleMapIntegration({
       <Alert>
         <MapPin className="h-4 w-4" />
         <AlertDescription>
-          Click anywhere on the map to add a location, search for places, or enter coordinates manually.
-          Existing network locations are shown as colored markers.
+          Click anywhere on the Karnataka map to add a location, search for places, or enter coordinates manually.
+          Existing network locations are shown as colored markers: Green (Farms), Blue (Collection Centers), Purple (Processing Plants).
         </AlertDescription>
       </Alert>
     </div>

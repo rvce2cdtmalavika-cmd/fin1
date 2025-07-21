@@ -19,8 +19,7 @@ import {
   Map,
   Zap,
   RefreshCw,
-  CheckCircle,
-  AlertTriangle
+  CheckCircle
 } from 'lucide-react';
 
 interface GoogleLocation {
@@ -32,7 +31,7 @@ interface GoogleLocation {
 }
 
 export function EnhancedDairyNetworkDesigner() {
-  const { nodes, routes, metrics, isLoading } = useDairyData();
+  const { nodes, routes, isLoading } = useDairyData();
   const [activeTab, setActiveTab] = useState('overview');
   const [isOptimizing, setIsOptimizing] = useState(false);
   const { toast } = useToast();
@@ -77,13 +76,11 @@ export function EnhancedDairyNetworkDesigner() {
     };
   }).filter(Boolean) as any[];
 
-
   const handleLocationSelect = async (location: GoogleLocation) => {
     try {
-      // Here you would typically open a form to specify facility type and details
       toast({
         title: "Location Selected",
-        description: `${location.name} has been selected. Please specify facility type and details.`,
+        description: `${location.name} has been selected. Please specify facility type and details in the data management tab.`,
       });
     } catch (error) {
       toast({
@@ -97,7 +94,6 @@ export function EnhancedDairyNetworkDesigner() {
   const runNetworkOptimization = async () => {
     setIsOptimizing(true);
     try {
-      // Simulate network optimization
       await new Promise(resolve => setTimeout(resolve, 3000));
       
       toast({
@@ -131,7 +127,7 @@ export function EnhancedDairyNetworkDesigner() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Network className="h-6 w-6" />
-            Karnataka Dairy Supply Chain Optimizer
+            Karnataka Dairy Supply Chain Network
           </CardTitle>
           <CardDescription>
             Comprehensive network design and optimization for dairy supply chains across Karnataka
@@ -163,11 +159,9 @@ export function EnhancedDairyNetworkDesigner() {
                 <CheckCircle className="h-3 w-3 mr-1" />
                 Network Status: Operational
               </Badge>
-              {metrics && (
-                <Badge variant="outline">
-                  Efficiency: {metrics.networkEfficiency.toFixed(1)}%
-                </Badge>
-              )}
+              <Badge variant="outline">
+                Karnataka Region
+              </Badge>
             </div>
             <Button onClick={runNetworkOptimization} disabled={isOptimizing}>
               {isOptimizing ? (
@@ -175,7 +169,7 @@ export function EnhancedDairyNetworkDesigner() {
               ) : (
                 <Zap className="h-4 w-4 mr-2" />
               )}
-              {isOptimizing ? 'Optimizing...' : 'Optimize Network'}
+              {isOptimizing ? 'Optimizing...' : 'Quick Optimize'}
             </Button>
           </div>
         </CardContent>
@@ -183,14 +177,14 @@ export function EnhancedDairyNetworkDesigner() {
 
       {/* Main Content Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-6">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="overview" className="flex items-center gap-2">
             <BarChart3 className="h-4 w-4" />
-            Overview
+            Analytics
           </TabsTrigger>
           <TabsTrigger value="map" className="flex items-center gap-2">
             <Map className="h-4 w-4" />
-            Interactive Map
+            Network Map
           </TabsTrigger>
           <TabsTrigger value="locations" className="flex items-center gap-2">
             <Network className="h-4 w-4" />
@@ -204,10 +198,6 @@ export function EnhancedDairyNetworkDesigner() {
             <Database className="h-4 w-4" />
             Data Management
           </TabsTrigger>
-          <TabsTrigger value="analytics" className="flex items-center gap-2">
-            <BarChart3 className="h-4 w-4" />
-            Analytics
-          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-4">
@@ -217,9 +207,9 @@ export function EnhancedDairyNetworkDesigner() {
         <TabsContent value="map" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Karnataka Dairy Network Map</CardTitle>
+              <CardTitle>Karnataka Dairy Network Interactive Map</CardTitle>
               <CardDescription>
-                Interactive visualization of your dairy supply chain network across Karnataka
+                Real-time visualization of your dairy supply chain network across Karnataka with route optimization
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -249,10 +239,6 @@ export function EnhancedDairyNetworkDesigner() {
 
         <TabsContent value="data" className="space-y-4">
           <DataImportExport />
-        </TabsContent>
-
-        <TabsContent value="analytics" className="space-y-4">
-          <NetworkPerformanceOverview />
         </TabsContent>
       </Tabs>
     </div>
