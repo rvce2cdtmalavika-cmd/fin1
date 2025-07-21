@@ -43,6 +43,9 @@ const nodeIcons = {
   supermarket: createIcon('#607D8B', '🛒'),
 };
 
+// Default icon for unknown types
+const defaultIcon = createIcon('#6B7280', '📍');
+
 // Bengaluru specific locations for demo
 const bengaluruLocations = {
   dairy_farms: [
@@ -579,24 +582,27 @@ export default function SupplyChainApp() {
                     
                     <MapClickHandler onMapClick={handleMapClick} />
                     
-                    {nodes.map((node) => (
-                      <Marker
-                        key={node.id}
-                        position={[node.lat, node.lng]}
-                        icon={nodeIcons[node.type as keyof typeof nodeIcons]}
-                      >
-                        <Popup>
-                          <div className="p-2">
-                            <h3 className="font-semibold">{node.name}</h3>
-                            <p className="text-sm text-muted-foreground">{node.type.replace('_', ' ')}</p>
-                            {node.capacity && <p className="text-sm">Capacity: {node.capacity} kg</p>}
-                            {node.demand && <p className="text-sm">Demand: {node.demand} kg/day</p>}
-                            {node.temp_range && <p className="text-sm">Temperature: {node.temp_range}</p>}
-                            {node.operating_hours && <p className="text-sm">Hours: {node.operating_hours}</p>}
-                          </div>
-                        </Popup>
-                      </Marker>
-                    ))}
+                    {nodes.map((node) => {
+                      const nodeIcon = nodeIcons[node.type as keyof typeof nodeIcons] || defaultIcon;
+                      return (
+                        <Marker
+                          key={node.id}
+                          position={[node.lat, node.lng]}
+                          icon={nodeIcon}
+                        >
+                          <Popup>
+                            <div className="p-2">
+                              <h3 className="font-semibold">{node.name}</h3>
+                              <p className="text-sm text-muted-foreground">{node.type.replace('_', ' ')}</p>
+                              {node.capacity && <p className="text-sm">Capacity: {node.capacity} kg</p>}
+                              {node.demand && <p className="text-sm">Demand: {node.demand} kg/day</p>}
+                              {node.temp_range && <p className="text-sm">Temperature: {node.temp_range}</p>}
+                              {node.operating_hours && <p className="text-sm">Hours: {node.operating_hours}</p>}
+                            </div>
+                          </Popup>
+                        </Marker>
+                      );
+                    })}
                     
                     {edges.map((edge) => 
                       edge.route ? (
