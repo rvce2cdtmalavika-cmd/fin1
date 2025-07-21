@@ -1,13 +1,11 @@
 
-import React, { useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import React from 'react';
 import { Badge } from '@/components/ui/badge';
 import { EnhancedDairyNetworkDesigner } from './EnhancedDairyNetworkDesigner';
 import { 
   Truck, 
-  Users,
-  Milk,
-  TrendingUp
+  TrendingUp,
+  MapPin
 } from 'lucide-react';
 
 export function SupplyChainApp() {
@@ -23,7 +21,7 @@ export function SupplyChainApp() {
             <div>
               <h1 className="text-3xl font-bold tracking-tight">Karnataka Dairy Supply Chain Optimizer</h1>
               <p className="text-muted-foreground">
-                AI-powered optimization platform for dairy supply chains across Karnataka
+                Interactive network design and optimization platform for dairy supply chains across Karnataka
               </p>
             </div>
           </div>
@@ -31,20 +29,16 @@ export function SupplyChainApp() {
           <div className="flex items-center gap-2">
             <Badge variant="secondary" className="bg-green-100 text-green-800">
               <TrendingUp className="h-3 w-3 mr-1" />
-              Karnataka Region Active
+              Real-time Optimization
             </Badge>
             <Badge variant="outline">
-              <Users className="h-3 w-3 mr-1" />
-              Real-time Network Analytics
-            </Badge>
-            <Badge variant="outline">
-              <Milk className="h-3 w-3 mr-1" />
-              Dairy Supply Chain Focus
+              <MapPin className="h-3 w-3 mr-1" />
+              Karnataka Region Focus
             </Badge>
           </div>
         </div>
 
-        {/* Main Content - Direct Dairy Network Designer */}
+        {/* Main Content */}
         <EnhancedDairyNetworkDesigner />
       </div>
     </div>
