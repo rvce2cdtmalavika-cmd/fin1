@@ -37,6 +37,15 @@ export function EnhancedDairyNetworkDesigner() {
   const [isOptimizing, setIsOptimizing] = useState(false);
   const { toast } = useToast();
 
+  const getRouteColor = (vehicleType: string) => {
+    const colors = {
+      milk_tanker: '#10B981',
+      refrigerated_truck: '#3B82F6',
+      insulated_van: '#8B5CF6'
+    };
+    return colors[vehicleType as keyof typeof colors] || '#6B7280';
+  };
+
   // Transform dairy data for the map
   const mapNodes = nodes.map(node => ({
     id: node.id,
@@ -49,26 +58,25 @@ export function EnhancedDairyNetworkDesigner() {
     details: `${node.type.charAt(0).toUpperCase() + node.type.slice(1).replace('_', ' ')} in ${node.district}`
   }));
 
-  const mapEdges = routes.map(route => ({
-    id: route.id,
-    from: route.from_id,
-    to: route.to_id,
-    route: [
-      { lat: nodes.find(n => n.id === route.from_id)?.lat || 0, lng: nodes.find(n => n.id === route.from_id)?.lng || 0 },
-      { lat: nodes.find(n => n.id === route.to_id)?.lat || 0, lng: nodes.find(n => n.id === route.to_id)?.lng || 0 }
-    ],
-    color: getRouteColor(route.vehicle_type),
-    weight: 3
-  }));
-
-  const getRouteColor = (vehicleType: string) => {
-    const colors = {
-      milk_tanker: '#10B981',
-      refrigerated_truck: '#3B82F6',
-      insulated_van: '#8B5CF6'
+  const mapEdges = routes.map(route => {
+    const fromNode = nodes.find(n => n.id === route.from_id);
+    const toNode = nodes.find(n => n.id === route.to_id);
+    
+    if (!fromNode || !toNode) return null;
+    
+    return {
+      id: route.id,
+      from: route.from_id,
+      to: route.to_id,
+      route: [
+        { lat: fromNode.lat, lng: fromNode.lng } as any,
+        { lat: toNode.lat, lng: toNode.lng } as any
+      ],
+      color: getRouteColor(route.vehicle_type),
+      weight: 3
     };
-    return colors[vehicleType as keyof typeof colors] || '#6B7280';
-  };
+  }).filter(Boolean) as any[];
+
 
   const handleLocationSelect = async (location: GoogleLocation) => {
     try {
