@@ -1,383 +1,522 @@
-
 import React, { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Save, Calculator, MapPin, Milk, Factory, Truck, Store } from 'lucide-react';
+import { Separator } from '@/components/ui/separator';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useToast } from '@/hooks/use-toast';
+import { useDairyData } from '@/hooks/useDairyData';
+import { dairyService } from '@/services/dairyService';
+import { Truck, Factory, Milk, MapPin, Calculator, TrendingUp, RefreshCw, Download, Users, Package } from 'lucide-react';
 
-export interface DairyNode {
+interface DairyNode {
   id: string;
   name: string;
-  type: 'dairy_farm' | 'collection_center' | 'processing_plant' | 'distribution_center' | 'retail_outlet';
+  type: 'farm' | 'collection_center' | 'processing_plant';
   lat: number;
   lng: number;
   capacity: number;
-  dailyProduction?: number;
-  storageCapacity?: number;
-  processingCapacity?: number;
-  temperature: number;
-  shelfLife: number;
-  operatingCost: number;
-  products: string[];
+  production: number;
+  cost: number;
+  district: string;
+  efficiency: number;
 }
 
-export interface DairyRoute {
+interface DairyRoute {
   id: string;
   from: string;
   to: string;
   distance: number;
   transportCost: number;
   transitTime: number;
-  vehicleType: 'refrigerated_truck' | 'insulated_van' | 'milk_tanker';
+  vehicleType: string;
   capacity: number;
 }
 
-const DAIRY_PRODUCTS = [
-  'Fresh Milk',
-  'Yogurt',
-  'Cheese',
-  'Butter',
-  'Ice Cream',
-  'Cream',
-  'Paneer',
-  'Buttermilk'
-];
-
-const NODE_TYPES = {
-  dairy_farm: { icon: '🐄', color: 'bg-green-100 text-green-800', label: 'Dairy Farm' },
-  collection_center: { icon: '🏭', color: 'bg-blue-100 text-blue-800', label: 'Collection Center' },
-  processing_plant: { icon: '🏪', color: 'bg-purple-100 text-purple-800', label: 'Processing Plant' },
-  distribution_center: { icon: '📦', color: 'bg-orange-100 text-orange-800', label: 'Distribution Center' },
-  retail_outlet: { icon: '🏬', color: 'bg-red-100 text-red-800', label: 'Retail Outlet' }
-};
-
-export function DairyNetworkDesigner() {
-  const [nodes, setNodes] = useState<DairyNode[]>([]);
-  const [routes, setRoutes] = useState<DairyRoute[]>([]);
-  const [isAddingNode, setIsAddingNode] = useState(false);
-  const [selectedNodeType, setSelectedNodeType] = useState<DairyNode['type']>('dairy_farm');
-  const [nodeForm, setNodeForm] = useState({
+const DairyNetworkDesigner = () => {
+  const { nodes: demoNodes, routes: demoRoutes, metrics, isLoading, farms, plants, centers } = useDairyData();
+  const [customNodes, setCustomNodes] = useState<DairyNode[]>([]);
+  const [customRoutes, setCustomRoutes] = useState<DairyRoute[]>([]);
+  const [formData, setFormData] = useState({
     name: '',
-    lat: 0,
-    lng: 0,
-    capacity: 0,
-    dailyProduction: 0,
-    temperature: 4,
-    shelfLife: 7,
-    operatingCost: 0,
-    products: [] as string[]
+    type: '',
+    lat: '',
+    lng: '',
+    capacity: '',
+    production: '',
+    cost: '',
+    district: ''
   });
+  const [loadingOptimization, setLoadingOptimization] = useState(false);
+  const [showDemoData, setShowDemoData] = useState(true);
   const { toast } = useToast();
 
+  // Combine demo data with custom data when showing demo data
+  const allNodes = showDemoData ? [...demoNodes.map(node => ({
+    id: node.id,
+    name: node.name,
+    type: node.type,
+    lat: node.lat,
+    lng: node.lng,
+    capacity: node.capacity,
+    production: node.production || 0,
+    cost: 0,
+    district: node.district,
+    efficiency: 85
+  })), ...customNodes] : customNodes;
+
+  const allRoutes = showDemoData ? [...demoRoutes.map(route => ({
+    id: route.id,
+    from: route.from_id,
+    to: route.to_id,
+    distance: route.distance_km,
+    transportCost: route.cost_per_trip,
+    transitTime: route.estimated_time_hours,
+    vehicleType: route.vehicle_type,
+    capacity: route.optimal_load_liters
+  })), ...customRoutes] : customRoutes;
+
   const addNode = () => {
-    if (!nodeForm.name) {
+    if (!formData.name || !formData.type || !formData.lat || !formData.lng || !formData.capacity) {
       toast({
-        title: "Error",
-        description: "Please enter a node name",
+        title: "Missing Information",
+        description: "Please fill in all required fields",
         variant: "destructive"
       });
       return;
     }
 
     const newNode: DairyNode = {
-      id: `node-${Date.now()}`,
-      name: nodeForm.name,
-      type: selectedNodeType,
-      lat: nodeForm.lat,
-      lng: nodeForm.lng,
-      capacity: nodeForm.capacity,
-      dailyProduction: nodeForm.dailyProduction,
-      temperature: nodeForm.temperature,
-      shelfLife: nodeForm.shelfLife,
-      operatingCost: nodeForm.operatingCost,
-      products: nodeForm.products
+      id: Math.random().toString(36).substr(2, 9),
+      name: formData.name,
+      type: formData.type as 'farm' | 'collection_center' | 'processing_plant',
+      lat: parseFloat(formData.lat),
+      lng: parseFloat(formData.lng),
+      capacity: parseInt(formData.capacity),
+      production: parseInt(formData.production) || 0,
+      cost: parseFloat(formData.cost) || 0,
+      district: formData.district,
+      efficiency: Math.random() * 20 + 80 // Random efficiency between 80-100%
     };
 
-    setNodes([...nodes, newNode]);
-    setNodeForm({
+    setCustomNodes(prev => [...prev, newNode]);
+    setFormData({
       name: '',
-      lat: 0,
-      lng: 0,
-      capacity: 0,
-      dailyProduction: 0,
-      temperature: 4,
-      shelfLife: 7,
-      operatingCost: 0,
-      products: []
+      type: '',
+      lat: '',
+      lng: '',
+      capacity: '',
+      production: '',
+      cost: '',
+      district: ''
     });
-    setIsAddingNode(false);
-    
+
     toast({
-      title: "Success",
-      description: `${NODE_TYPES[selectedNodeType].label} added to network`,
+      title: "Node Added",
+      description: `${newNode.name} has been added to the network`,
     });
   };
 
+  const generateOptimizedRoutes = async () => {
+    setLoadingOptimization(true);
+    try {
+      const optimizedRoutes = await dairyService.generateOptimizedRoutes();
+      toast({
+        title: "Routes Optimized",
+        description: `Generated ${optimizedRoutes.length} optimized transport routes`,
+        variant: "default"
+      });
+    } catch (error) {
+      toast({
+        title: "Optimization Failed",
+        description: "Failed to generate optimized routes",
+        variant: "destructive"
+      });
+    } finally {
+      setLoadingOptimization(false);
+    }
+  };
+
   const optimizeNetwork = () => {
-    // Simple optimization algorithm for dairy network
-    const optimizedRoutes = [];
-    const farms = nodes.filter(n => n.type === 'dairy_farm');
-    const centers = nodes.filter(n => n.type === 'collection_center');
-    const plants = nodes.filter(n => n.type === 'processing_plant');
-    const distributors = nodes.filter(n => n.type === 'distribution_center');
-    const retailers = nodes.filter(n => n.type === 'retail_outlet');
+    const farms = allNodes.filter(node => node.type === 'farm');
+    const centers = allNodes.filter(node => node.type === 'collection_center');
+    const plants = allNodes.filter(node => node.type === 'processing_plant');
 
-    // Connect farms to nearest collection centers
+    const newRoutes: DairyRoute[] = [];
+
+    // Simple nearest neighbor optimization for custom nodes
     farms.forEach(farm => {
-      const nearestCenter = centers.reduce((closest, center) => {
-        const distance = Math.sqrt(
-          Math.pow(farm.lat - center.lat, 2) + Math.pow(farm.lng - center.lng, 2)
-        );
-        return !closest || distance < closest.distance ? { center, distance } : closest;
-      }, null as any);
+      if (centers.length > 0) {
+        const nearestCenter = centers.reduce((nearest, center) => {
+          const farmDistance = Math.sqrt(
+            Math.pow(farm.lat - center.lat, 2) + Math.pow(farm.lng - center.lng, 2)
+          );
+          const nearestDistance = Math.sqrt(
+            Math.pow(farm.lat - nearest.lat, 2) + Math.pow(farm.lng - nearest.lng, 2)
+          );
+          return farmDistance < nearestDistance ? center : nearest;
+        });
 
-      if (nearestCenter) {
-        optimizedRoutes.push({
-          id: `route-${Date.now()}-${Math.random()}`,
+        const distance = Math.sqrt(
+          Math.pow(farm.lat - nearestCenter.lat, 2) + Math.pow(farm.lng - nearestCenter.lng, 2)
+        ) * 111; // Rough km conversion
+
+        newRoutes.push({
+          id: Math.random().toString(36).substr(2, 9),
           from: farm.id,
-          to: nearestCenter.center.id,
-          distance: nearestCenter.distance * 111, // Convert to km
-          transportCost: nearestCenter.distance * 111 * 2.5, // ₹2.5 per km
-          transitTime: nearestCenter.distance * 111 / 40, // 40 km/h average
-          vehicleType: 'milk_tanker' as const,
-          capacity: 5000
+          to: nearestCenter.id,
+          distance: distance,
+          transportCost: distance * 8, // ₹8 per km
+          transitTime: distance / 40, // 40 km/h average
+          vehicleType: 'Milk Tanker',
+          capacity: Math.min(farm.production, 2000)
         });
       }
     });
 
-    setRoutes(optimizedRoutes);
+    centers.forEach(center => {
+      if (plants.length > 0) {
+        const nearestPlant = plants.reduce((nearest, plant) => {
+          const centerDistance = Math.sqrt(
+            Math.pow(center.lat - plant.lat, 2) + Math.pow(center.lng - plant.lng, 2)
+          );
+          const nearestDistance = Math.sqrt(
+            Math.pow(center.lat - nearest.lat, 2) + Math.pow(center.lng - nearest.lng, 2)
+          );
+          return centerDistance < nearestDistance ? plant : nearest;
+        });
+
+        const distance = Math.sqrt(
+          Math.pow(center.lat - nearestPlant.lat, 2) + Math.pow(center.lng - nearestPlant.lng, 2)
+        ) * 111;
+
+        newRoutes.push({
+          id: Math.random().toString(36).substr(2, 9),
+          from: center.id,
+          to: nearestPlant.id,
+          distance: distance,
+          transportCost: distance * 12, // ₹12 per km for refrigerated
+          transitTime: distance / 50, // 50 km/h highway speed
+          vehicleType: 'Refrigerated Truck',
+          capacity: center.capacity
+        });
+      }
+    });
+
+    setCustomRoutes(newRoutes);
     toast({
       title: "Network Optimized",
-      description: `Generated ${optimizedRoutes.length} optimized routes`,
+      description: `Generated ${newRoutes.length} optimized routes`,
     });
   };
 
   const calculateNetworkMetrics = () => {
-    const totalNodes = nodes.length;
-    const totalCapacity = nodes.reduce((sum, node) => sum + node.capacity, 0);
-    const totalProduction = nodes.reduce((sum, node) => sum + (node.dailyProduction || 0), 0);
-    const totalCost = nodes.reduce((sum, node) => sum + node.operatingCost, 0) + 
-                     routes.reduce((sum, route) => sum + route.transportCost, 0);
+    const totalNodes = allNodes.length;
+    const totalCapacity = allNodes.reduce((sum, node) => sum + node.capacity, 0);
+    const totalProduction = allNodes.filter(n => n.type === 'farm').reduce((sum, node) => sum + node.production, 0);
+    const totalCost = allRoutes.reduce((sum, route) => sum + route.transportCost, 0);
+    const efficiency = totalCapacity > 0 ? (totalProduction / totalCapacity) * 100 : 0;
 
     return {
       totalNodes,
       totalCapacity,
       totalProduction,
       totalCost,
-      efficiency: totalProduction / totalCost || 0
+      efficiency: Math.min(efficiency, 100)
     };
   };
 
-  const metrics = calculateNetworkMetrics();
+  const networkMetrics = metrics || calculateNetworkMetrics();
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <RefreshCw className="h-8 w-8 animate-spin" />
+        <span className="ml-2">Loading Bangalore dairy network data...</span>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
+      {/* Demo Data Toggle */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Package className="h-5 w-5" />
+            Bangalore Dairy Network Demo
+          </CardTitle>
+          <CardDescription>
+            Explore real dairy infrastructure data from Bangalore region or design your own custom network
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center gap-4">
+            <Button 
+              onClick={() => setShowDemoData(true)}
+              variant={showDemoData ? "default" : "outline"}
+            >
+              <Download className="h-4 w-4 mr-2" />
+              Load Bangalore Demo Data
+            </Button>
+            <Button 
+              onClick={() => setShowDemoData(false)}
+              variant={!showDemoData ? "default" : "outline"}
+            >
+              <Users className="h-4 w-4 mr-2" />
+              Custom Network Design
+            </Button>
+            <Button 
+              onClick={generateOptimizedRoutes}
+              disabled={loadingOptimization}
+              variant="secondary"
+            >
+              {loadingOptimization ? (
+                <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Calculator className="h-4 w-4 mr-2" />
+              )}
+              Generate Optimal Routes
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Network Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm">Network Nodes</CardTitle>
+            <CardTitle className="text-sm flex items-center gap-2">
+              <MapPin className="h-4 w-4" />
+              Total Nodes
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{metrics.totalNodes}</div>
-            <p className="text-xs text-muted-foreground">Total facilities</p>
+            <div className="text-2xl font-bold">{showDemoData ? farms.length + plants.length + centers.length : allNodes.length}</div>
+            <p className="text-xs text-muted-foreground">
+              {showDemoData ? `${farms.length} farms, ${centers.length} centers, ${plants.length} plants` : 'Network facilities'}
+            </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm">Daily Production</CardTitle>
+            <CardTitle className="text-sm flex items-center gap-2">
+              <Milk className="h-4 w-4" />
+              Daily Production
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{metrics.totalProduction.toLocaleString()}</div>
+            <div className="text-2xl font-bold">
+              {showDemoData && metrics ? 
+                (metrics.totalProduction / 1000).toFixed(0) + 'K' : 
+                (networkMetrics.totalProduction / 1000).toFixed(0) + 'K'
+              }
+            </div>
             <p className="text-xs text-muted-foreground">Liters per day</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm">Total Capacity</CardTitle>
+            <CardTitle className="text-sm flex items-center gap-2">
+              <Factory className="h-4 w-4" />
+              Processing Capacity
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{metrics.totalCapacity.toLocaleString()}</div>
-            <p className="text-xs text-muted-foreground">Liters storage</p>
+            <div className="text-2xl font-bold">
+              {showDemoData && metrics ? 
+                (metrics.totalProcessingCapacity / 1000).toFixed(0) + 'K' : 
+                (networkMetrics.totalCapacity / 1000).toFixed(0) + 'K'
+              }
+            </div>
+            <p className="text-xs text-muted-foreground">Liters capacity</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm">Operating Cost</CardTitle>
+            <CardTitle className="text-sm flex items-center gap-2">
+              <TrendingUp className="h-4 w-4" />
+              Network Efficiency
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">₹{metrics.totalCost.toLocaleString()}</div>
-            <p className="text-xs text-muted-foreground">Daily cost</p>
+            <div className="text-2xl font-bold">
+              {showDemoData && metrics ? 
+                metrics.networkEfficiency.toFixed(1) + '%' : 
+                networkMetrics.efficiency.toFixed(1) + '%'
+              }
+            </div>
+            <p className="text-xs text-muted-foreground">Production vs capacity</p>
           </CardContent>
         </Card>
       </div>
 
+      {showDemoData && (
+        <Alert>
+          <MapPin className="h-4 w-4" />
+          <AlertDescription>
+            <strong>Bangalore Demo Network:</strong> This network includes {farms.length} dairy farms, {centers.length} collection centers, 
+            and {plants.length} processing plants across Bangalore Rural, Urban, and surrounding districts like Kolar, Tumkur, and Ramanagara.
+          </AlertDescription>
+        </Alert>
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Add Custom Node Form */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <MapPin className="h-5 w-5" />
-              Network Designer
+              Add Custom Node
             </CardTitle>
+            <CardDescription>
+              Add your own dairy facilities to the network
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex flex-wrap gap-2">
-              {Object.entries(NODE_TYPES).map(([type, config]) => (
-                <Button
-                  key={type}
-                  variant={selectedNodeType === type ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setSelectedNodeType(type as DairyNode['type'])}
-                  className="text-xs"
-                >
-                  {config.icon} {config.label}
-                </Button>
-              ))}
-            </div>
+            <div className="grid grid-cols-1 gap-4">
+              <div>
+                <Label htmlFor="name">Facility Name</Label>
+                <Input
+                  id="name"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  placeholder="Enter facility name"
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor="type">Facility Type</Label>
+                <Select value={formData.type} onValueChange={(value) => setFormData({ ...formData, type: value })}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select facility type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="farm">Dairy Farm</SelectItem>
+                    <SelectItem value="collection_center">Collection Center</SelectItem>
+                    <SelectItem value="processing_plant">Processing Plant</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
 
-            {isAddingNode && (
-              <div className="space-y-3 p-4 border rounded-lg">
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <Label htmlFor="name">Name</Label>
-                    <Input
-                      id="name"
-                      value={nodeForm.name}
-                      onChange={(e) => setNodeForm({...nodeForm, name: e.target.value})}
-                      placeholder="Enter facility name"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="capacity">Capacity (L)</Label>
-                    <Input
-                      id="capacity"
-                      type="number"
-                      value={nodeForm.capacity}
-                      onChange={(e) => setNodeForm({...nodeForm, capacity: Number(e.target.value)})}
-                    />
-                  </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <Label htmlFor="lat">Latitude</Label>
+                  <Input
+                    id="lat"
+                    value={formData.lat}
+                    onChange={(e) => setFormData({ ...formData, lat: e.target.value })}
+                    placeholder="12.9716"
+                  />
                 </div>
-
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <Label htmlFor="lat">Latitude</Label>
-                    <Input
-                      id="lat"
-                      type="number"
-                      step="0.000001"
-                      value={nodeForm.lat}
-                      onChange={(e) => setNodeForm({...nodeForm, lat: Number(e.target.value)})}
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="lng">Longitude</Label>
-                    <Input
-                      id="lng"
-                      type="number"
-                      step="0.000001"
-                      value={nodeForm.lng}
-                      onChange={(e) => setNodeForm({...nodeForm, lng: Number(e.target.value)})}
-                    />
-                  </div>
-                </div>
-
-                {selectedNodeType === 'dairy_farm' && (
-                  <div>
-                    <Label htmlFor="production">Daily Production (L)</Label>
-                    <Input
-                      id="production"
-                      type="number"
-                      value={nodeForm.dailyProduction}
-                      onChange={(e) => setNodeForm({...nodeForm, dailyProduction: Number(e.target.value)})}
-                    />
-                  </div>
-                )}
-
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <Label htmlFor="temperature">Temperature (°C)</Label>
-                    <Input
-                      id="temperature"
-                      type="number"
-                      value={nodeForm.temperature}
-                      onChange={(e) => setNodeForm({...nodeForm, temperature: Number(e.target.value)})}
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="shelfLife">Shelf Life (days)</Label>
-                    <Input
-                      id="shelfLife"
-                      type="number"
-                      value={nodeForm.shelfLife}
-                      onChange={(e) => setNodeForm({...nodeForm, shelfLife: Number(e.target.value)})}
-                    />
-                  </div>
-                </div>
-
-                <div className="flex gap-2">
-                  <Button onClick={addNode} size="sm">
-                    <Save className="h-4 w-4 mr-2" />
-                    Add Node
-                  </Button>
-                  <Button variant="outline" onClick={() => setIsAddingNode(false)} size="sm">
-                    Cancel
-                  </Button>
+                <div>
+                  <Label htmlFor="lng">Longitude</Label>
+                  <Input
+                    id="lng"
+                    value={formData.lng}
+                    onChange={(e) => setFormData({ ...formData, lng: e.target.value })}
+                    placeholder="77.5946"
+                  />
                 </div>
               </div>
-            )}
 
-            <div className="flex gap-2">
-              <Button onClick={() => setIsAddingNode(true)} disabled={isAddingNode}>
-                <Plus className="h-4 w-4 mr-2" />
-                Add Node
-              </Button>
-              <Button onClick={optimizeNetwork} disabled={nodes.length < 2}>
-                <Calculator className="h-4 w-4 mr-2" />
-                Optimize Network
-              </Button>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <Label htmlFor="capacity">Capacity (Liters)</Label>
+                  <Input
+                    id="capacity"
+                    value={formData.capacity}
+                    onChange={(e) => setFormData({ ...formData, capacity: e.target.value })}
+                    placeholder="10000"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="production">Daily Production</Label>
+                  <Input
+                    id="production"
+                    value={formData.production}
+                    onChange={(e) => setFormData({ ...formData, production: e.target.value })}
+                    placeholder="5000"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <Label htmlFor="district">District</Label>
+                <Input
+                  id="district"
+                  value={formData.district}
+                  onChange={(e) => setFormData({ ...formData, district: e.target.value })}
+                  placeholder="Bangalore Urban"
+                />
+              </div>
+
+              <div className="flex gap-2">
+                <Button onClick={addNode} className="flex-1">
+                  <MapPin className="h-4 w-4 mr-2" />
+                  Add Node
+                </Button>
+                <Button onClick={optimizeNetwork} variant="secondary">
+                  <Calculator className="h-4 w-4 mr-2" />
+                  Optimize
+                </Button>
+              </div>
             </div>
           </CardContent>
         </Card>
 
+        {/* Network Nodes Display */}
         <Card>
           <CardHeader>
             <CardTitle>Network Nodes</CardTitle>
+            <CardDescription>
+              {showDemoData ? 'Bangalore dairy infrastructure + custom nodes' : 'Your custom network design'}
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-2 max-h-96 overflow-y-auto">
-              {nodes.map((node) => (
+              {allNodes.slice(0, 10).map((node) => (
                 <div key={node.id} className="flex items-center justify-between p-3 border rounded-lg">
                   <div className="flex items-center gap-3">
-                    <div className="text-lg">{NODE_TYPES[node.type].icon}</div>
+                    <div className="text-2xl">
+                      {node.type === 'farm' && '🐄'}
+                      {node.type === 'collection_center' && '🏭'}
+                      {node.type === 'processing_plant' && '🏪'}
+                    </div>
                     <div>
                       <p className="font-medium">{node.name}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {NODE_TYPES[node.type].label}
-                      </p>
+                      <p className="text-sm text-muted-foreground">{node.district}</p>
                     </div>
                   </div>
                   <div className="text-right">
-                    <Badge variant="secondary" className={NODE_TYPES[node.type].color}>
-                      {node.capacity.toLocaleString()}L
+                    <Badge variant="secondary">
+                      {(node.capacity / 1000).toFixed(0)}K L
                     </Badge>
-                    {node.dailyProduction && (
+                    {node.production > 0 && (
                       <p className="text-xs text-muted-foreground mt-1">
-                        {node.dailyProduction.toLocaleString()}L/day
+                        {(node.production / 1000).toFixed(0)}K L/day
                       </p>
                     )}
                   </div>
                 </div>
               ))}
-              {nodes.length === 0 && (
+              
+              {allNodes.length > 10 && (
+                <div className="text-center py-2 text-sm text-muted-foreground">
+                  ... and {allNodes.length - 10} more facilities
+                </div>
+              )}
+              
+              {allNodes.length === 0 && (
                 <div className="text-center py-8 text-muted-foreground">
                   <Milk className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                  <p>No nodes added yet. Start designing your network!</p>
+                  <p>No nodes added yet. Load demo data or add custom nodes!</p>
                 </div>
               )}
             </div>
@@ -385,38 +524,57 @@ export function DairyNetworkDesigner() {
         </Card>
       </div>
 
-      {routes.length > 0 && (
+      {/* Optimized Routes */}
+      {allRoutes.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle>Optimized Routes</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <Truck className="h-5 w-5" />
+              Transport Routes
+            </CardTitle>
+            <CardDescription>
+              Optimized transportation routes in the network
+            </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-2">
-              {routes.map((route) => (
-                <div key={route.id} className="flex items-center justify-between p-3 border rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <Truck className="h-5 w-5 text-blue-600" />
-                    <div>
-                      <p className="font-medium">
-                        {nodes.find(n => n.id === route.from)?.name} → {nodes.find(n => n.id === route.to)?.name}
-                      </p>
+            <div className="space-y-2 max-h-64 overflow-y-auto">
+              {allRoutes.slice(0, 8).map((route) => {
+                const fromNode = allNodes.find(n => n.id === route.from);
+                const toNode = allNodes.find(n => n.id === route.to);
+                return (
+                  <div key={route.id} className="flex items-center justify-between p-3 border rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <Truck className="h-5 w-5 text-blue-600" />
+                      <div>
+                        <p className="font-medium">
+                          {fromNode?.name || 'Unknown'} → {toNode?.name || 'Unknown'}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          {route.vehicleType}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-medium">₹{route.transportCost.toFixed(0)}</p>
                       <p className="text-sm text-muted-foreground">
-                        {route.vehicleType.replace('_', ' ').toUpperCase()}
+                        {route.distance.toFixed(1)} km • {route.transitTime.toFixed(1)}h
                       </p>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <p className="font-medium">₹{route.transportCost.toFixed(2)}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {route.distance.toFixed(1)} km • {route.transitTime.toFixed(1)}h
-                    </p>
-                  </div>
+                );
+              })}
+              
+              {allRoutes.length > 8 && (
+                <div className="text-center py-2 text-sm text-muted-foreground">
+                  ... and {allRoutes.length - 8} more routes
                 </div>
-              ))}
+              )}
             </div>
           </CardContent>
         </Card>
       )}
     </div>
   );
-}
+};
+
+export default DairyNetworkDesigner;

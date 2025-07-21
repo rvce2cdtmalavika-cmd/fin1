@@ -65,6 +65,54 @@ export type Database = {
         }
         Relationships: []
       }
+      collection_centers: {
+        Row: {
+          active: boolean | null
+          collection_schedule: string
+          contact_person: string | null
+          cooling_facility: boolean | null
+          created_at: string | null
+          district: string
+          id: string
+          location_lat: number
+          location_lng: number
+          name: string
+          phone: string | null
+          serves_villages: string[]
+          storage_capacity_liters: number
+        }
+        Insert: {
+          active?: boolean | null
+          collection_schedule: string
+          contact_person?: string | null
+          cooling_facility?: boolean | null
+          created_at?: string | null
+          district: string
+          id?: string
+          location_lat: number
+          location_lng: number
+          name: string
+          phone?: string | null
+          serves_villages: string[]
+          storage_capacity_liters: number
+        }
+        Update: {
+          active?: boolean | null
+          collection_schedule?: string
+          contact_person?: string | null
+          cooling_facility?: boolean | null
+          created_at?: string | null
+          district?: string
+          id?: string
+          location_lat?: number
+          location_lng?: number
+          name?: string
+          phone?: string | null
+          serves_villages?: string[]
+          storage_capacity_liters?: number
+        }
+        Relationships: []
+      }
       daily_catches: {
         Row: {
           catch_date: string
@@ -111,6 +159,57 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      dairy_farms: {
+        Row: {
+          active: boolean | null
+          cattle_count: number
+          contact_person: string | null
+          created_at: string | null
+          daily_production_liters: number
+          district: string
+          established_year: number | null
+          farm_type: string
+          id: string
+          location_lat: number
+          location_lng: number
+          name: string
+          organic_certified: boolean | null
+          phone: string | null
+        }
+        Insert: {
+          active?: boolean | null
+          cattle_count: number
+          contact_person?: string | null
+          created_at?: string | null
+          daily_production_liters: number
+          district: string
+          established_year?: number | null
+          farm_type?: string
+          id?: string
+          location_lat: number
+          location_lng: number
+          name: string
+          organic_certified?: boolean | null
+          phone?: string | null
+        }
+        Update: {
+          active?: boolean | null
+          cattle_count?: number
+          contact_person?: string | null
+          created_at?: string | null
+          daily_production_liters?: number
+          district?: string
+          established_year?: number | null
+          farm_type?: string
+          id?: string
+          location_lat?: number
+          location_lng?: number
+          name?: string
+          organic_certified?: boolean | null
+          phone?: string | null
+        }
+        Relationships: []
       }
       forecasts: {
         Row: {
@@ -367,6 +466,57 @@ export type Database = {
         }
         Relationships: []
       }
+      processing_plants: {
+        Row: {
+          active: boolean | null
+          certifications: string[] | null
+          contact_person: string | null
+          created_at: string | null
+          district: string
+          established_year: number | null
+          id: string
+          location_lat: number
+          location_lng: number
+          name: string
+          phone: string | null
+          plant_type: string
+          processing_capacity_liters_per_day: number
+          products: string[]
+        }
+        Insert: {
+          active?: boolean | null
+          certifications?: string[] | null
+          contact_person?: string | null
+          created_at?: string | null
+          district: string
+          established_year?: number | null
+          id?: string
+          location_lat: number
+          location_lng: number
+          name: string
+          phone?: string | null
+          plant_type: string
+          processing_capacity_liters_per_day: number
+          products: string[]
+        }
+        Update: {
+          active?: boolean | null
+          certifications?: string[] | null
+          contact_person?: string | null
+          created_at?: string | null
+          district?: string
+          established_year?: number | null
+          id?: string
+          location_lat?: number
+          location_lng?: number
+          name?: string
+          phone?: string | null
+          plant_type?: string
+          processing_capacity_liters_per_day?: number
+          products?: string[]
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string | null
@@ -427,6 +577,57 @@ export type Database = {
           spoilage_rate_per_hour?: number
           temperature_threshold_celsius?: number | null
           unrefrigerated_hours?: number
+        }
+        Relationships: []
+      }
+      transport_routes: {
+        Row: {
+          active: boolean | null
+          cost_per_trip: number
+          created_at: string | null
+          distance_km: number
+          estimated_time_hours: number
+          frequency_per_day: number | null
+          from_id: string
+          from_type: string
+          id: string
+          optimal_load_liters: number
+          route_name: string
+          to_id: string
+          to_type: string
+          vehicle_type: string
+        }
+        Insert: {
+          active?: boolean | null
+          cost_per_trip: number
+          created_at?: string | null
+          distance_km: number
+          estimated_time_hours: number
+          frequency_per_day?: number | null
+          from_id: string
+          from_type: string
+          id?: string
+          optimal_load_liters: number
+          route_name: string
+          to_id: string
+          to_type: string
+          vehicle_type: string
+        }
+        Update: {
+          active?: boolean | null
+          cost_per_trip?: number
+          created_at?: string | null
+          distance_km?: number
+          estimated_time_hours?: number
+          frequency_per_day?: number | null
+          from_id?: string
+          from_type?: string
+          id?: string
+          optimal_load_liters?: number
+          route_name?: string
+          to_id?: string
+          to_type?: string
+          vehicle_type?: string
         }
         Relationships: []
       }

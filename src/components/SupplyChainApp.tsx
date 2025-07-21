@@ -9,7 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { useSupplyChainData } from '@/hooks/useSupplyChainData';
 import { SupplyChainMap } from './SupplyChainMap';
-import { DairyNetworkDesigner } from './DairyNetworkDesigner';
+import DairyNetworkDesigner from './DairyNetworkDesigner';
 import { DairyOptimizationEngine } from './DairyOptimizationEngine';
 import { ErrorBoundary } from './ErrorBoundary';
 
