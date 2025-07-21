@@ -9,8 +9,9 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { AlertCircle, MapPin, Truck, Thermometer, Clock, IndianRupee, Package } from 'lucide-react';
+import { AlertCircle, MapPin, Truck, Thermometer, Clock, IndianRupee, Package, LogOut, User } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/useAuth';
 
 // Custom icons for different node types using divIcon (more reliable)
 const createIcon = (color: string, emoji: string) => {
@@ -176,6 +177,7 @@ export default function SupplyChainApp() {
   const [isOptimizing, setIsOptimizing] = useState<boolean>(false);
   
   const { toast } = useToast();
+  const { user, signOut } = useAuth();
   const mapRef = useRef<any>(null);
 
   // Initialize with some Bengaluru locations
@@ -473,6 +475,31 @@ export default function SupplyChainApp() {
 
   return (
     <div className="min-h-screen bg-background">
+      {/* Header with user info and sign out */}
+      <header className="border-b bg-card">
+        <div className="container mx-auto px-4 py-3 flex justify-between items-center">
+          <div className="flex items-center gap-2">
+            <Package className="h-6 w-6 text-primary" />
+            <span className="font-semibold text-lg">Supply Chain Optimizer</span>
+          </div>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <User className="h-4 w-4" />
+              <span>{user?.email}</span>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={signOut}
+              className="flex items-center gap-2"
+            >
+              <LogOut className="h-4 w-4" />
+              Sign Out
+            </Button>
+          </div>
+        </div>
+      </header>
+
       <div className="container mx-auto p-4">
         <div className="mb-6">
           <h1 className="text-3xl font-bold mb-2 flex items-center gap-2">
