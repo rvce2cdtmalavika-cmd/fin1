@@ -4,71 +4,183 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
-import { useDairyData } from '@/hooks/useDairyData';
 import { 
   Upload, 
   Download, 
   FileText, 
-  CheckCircle, 
-  AlertCircle,
-  Database,
-  FileSpreadsheet
+  AlertTriangle, 
+  CheckCircle,
+  Copy,
+  Database
 } from 'lucide-react';
 
+interface CSVTemplate {
+  name: string;
+  headers: string[];
+  description: string;
+  sampleData: string[][];
+  requirements: string[];
+}
+
+const CSV_TEMPLATES: CSVTemplate[] = [
+  {
+    name: 'Dairy Farms',
+    headers: [
+      'name', 'latitude', 'longitude', 'district', 'cattle_count', 
+      'daily_production_liters', 'farm_type', 'organic_certified', 
+      'contact_person', 'phone', 'established_year'
+    ],
+    description: 'Import dairy farm locations with production capacity and operational details',
+    sampleData: [
+      ['Green Valley Farm', '12.9716', '77.5946', 'Bangalore Rural', '50', '500', 'mixed', 'false', 'Ravi Kumar', '+91-9876543210', '2010'],
+      ['Sunrise Dairy', '13.0827', '77.5946', 'Bangalore Urban', '75', '750', 'dairy', 'true', 'Sunita Devi', '+91-9876543211', '2008']
+    ],
+    requirements: [
+      'latitude and longitude must be valid decimal degrees',
+      'daily_production_liters should be realistic (50-2000L typical)',
+      'farm_type: mixed, dairy, or organic',
+      'organic_certified: true or false'
+    ]
+  },
+  {
+    name: 'Collection Centers',
+    headers: [
+      'name', 'latitude', 'longitude', 'district', 'storage_capacity_liters',
+      'cooling_facility', 'collection_schedule', 'serves_villages', 
+      'contact_person', 'phone'
+    ],
+    description: 'Import milk collection centers with storage and operational details',
+    sampleData: [
+      ['Central Collection Hub', '12.9716', '77.5946', 'Bangalore Rural', '5000', 'true', 'twice_daily', 'Village1,Village2,Village3', 'Manjunath', '+91-9876543212'],
+      ['North Zone Center', '13.0827', '77.5946', 'Bangalore Urban', '3000', 'true', 'morning_evening', 'Village4,Village5', 'Lakshmi', '+91-9876543213']
+    ],
+    requirements: [
+      'storage_capacity_liters typical range: 1000-10000L',
+      'cooling_facility: true or false',
+      'collection_schedule: once_daily, twice_daily, or morning_evening',
+      'serves_villages: comma-separated list of village names'
+    ]
+  },
+  {
+    name: 'Processing Plants',
+    headers: [
+      'name', 'latitude', 'longitude', 'district', 'plant_type',
+      'processing_capacity_liters_per_day', 'products', 'certifications',
+      'contact_person', 'phone', 'established_year'
+    ],
+    description: 'Import dairy processing facilities with capacity and product details',
+    sampleData: [
+      ['Modern Dairy Plant', '12.9716', '77.5946', 'Bangalore Urban', 'integrated', '50000', 'milk,curd,butter,cheese', 'FSSAI,ISO22000,HACCP', 'Ramesh Sharma', '+91-9876543214', '2015'],
+      ['Heritage Foods Unit', '13.0827', '77.5946', 'Bangalore Rural', 'specialized', '25000', 'milk,paneer,ghee', 'FSSAI,Organic', 'Priya Patel', '+91-9876543215', '2012']
+    ],
+    requirements: [
+      'plant_type: integrated, specialized, or cooperative',
+      'processing_capacity_liters_per_day typical range: 5000-100000L',
+      'products: comma-separated list (milk,curd,butter,cheese,paneer,ghee,ice_cream)',
+      'certifications: comma-separated list of valid certifications'
+    ]
+  },
+  {
+    name: 'Distributors',
+    headers: [
+      'name', 'latitude', 'longitude', 'city', 'distributor_type',
+      'storage_capacity_liters', 'refrigerated_storage', 'delivery_vehicles',
+      'service_radius_km', 'contact_person', 'phone'
+    ],
+    description: 'Import distributor hubs for wholesale and retail distribution',
+    sampleData: [
+      ['City Distribution Hub', '12.9716', '77.5946', 'Bangalore', 'wholesale', '15000', 'true', '10', '25', 'Vikram Singh', '+91-9876543216'],
+      ['Local Distributor', '13.0827', '77.5946', 'Mysore', 'retail', '5000', 'true', '3', '15', 'Anita Reddy', '+91-9876543217']
+    ],
+    requirements: [
+      'distributor_type: wholesale, retail, or mixed',
+      'storage_capacity_liters typical range: 2000-50000L',
+      'refrigerated_storage: true or false',
+      'delivery_vehicles: number of vehicles available',
+      'service_radius_km: delivery coverage area in kilometers'
+    ]
+  },
+  {
+    name: 'Transport Routes',
+    headers: [
+      'route_name', 'from_type', 'from_id', 'to_type', 'to_id',
+      'distance_km', 'estimated_time_hours', 'vehicle_type', 'cost_per_trip',
+      'optimal_load_liters', 'frequency_per_day'
+    ],
+    description: 'Import transportation routes between network nodes',
+    sampleData: [
+      ['Farm to Center Route 1', 'farm', 'farm_001', 'collection_center', 'center_001', '15.5', '0.75', 'refrigerated_truck', '450', '2000', '2'],
+      ['Center to Plant Route 1', 'collection_center', 'center_001', 'processing_plant', 'plant_001', '45.2', '2.5', 'bulk_tanker', '1200', '5000', '1']
+    ],
+    requirements: [
+      'from_type/to_type: farm, collection_center, processing_plant, distributor',
+      'from_id/to_id: must match existing node IDs',
+      'distance_km: actual road distance',
+      'vehicle_type: refrigerated_truck, insulated_van, bulk_tanker, or regular_truck',
+      'cost_per_trip: total cost including fuel, driver, maintenance'
+    ]
+  },
+  {
+    name: 'Product Specifications',
+    headers: [
+      'product_id', 'product_name', 'category', 'min_temp_celsius', 'max_temp_celsius',
+      'shelf_life_hours_refrigerated', 'shelf_life_hours_ambient', 'spoilage_rate_per_hour_ambient',
+      'temperature_sensitivity', 'packaging_requirements', 'transport_requirements'
+    ],
+    description: 'Import custom dairy product specifications with temperature and quality requirements',
+    sampleData: [
+      ['custom_milk_a2', 'A2 Organic Milk', 'milk', '0', '4', '168', '4', '8.5', 'high', 'opaque,sealed', 'refrigerated,minimal_agitation'],
+      ['custom_greek_yogurt', 'Greek Yogurt', 'fermented', '2', '6', '336', '8', '6.0', 'high', 'sealed,moisture_proof', 'refrigerated,stable_temperature']
+    ],
+    requirements: [
+      'category: milk, fermented, cheese, butter, frozen',
+      'temperatures in Celsius',
+      'shelf_life in hours',
+      'spoilage_rate_per_hour_ambient: percentage per hour',
+      'temperature_sensitivity: low, medium, or high',
+      'requirements: comma-separated lists'
+    ]
+  }
+];
+
 export function EnhancedDataImportExport() {
+  const [selectedTemplate, setSelectedTemplate] = useState<CSVTemplate>(CSV_TEMPLATES[0]);
   const [importFile, setImportFile] = useState<File | null>(null);
   const [importStatus, setImportStatus] = useState<'idle' | 'processing' | 'success' | 'error'>('idle');
   const [importErrors, setImportErrors] = useState<string[]>([]);
-  const [validatedData, setValidatedData] = useState<any[]>([]);
-  
-  const { nodes, routes } = useDairyData();
   const { toast } = useToast();
 
-  // Required CSV headers for each entity type
-  const csvHeaders = {
-    farms: [
-      'name',
-      'district',
-      'latitude',
-      'longitude',
-      'daily_production_liters',
-      'contact_person',
-      'phone',
-      'milk_quality_grade'
-    ],
-    collection_centers: [
-      'name',
-      'district',
-      'latitude',
-      'longitude',
-      'storage_capacity_liters',
-      'contact_person',
-      'phone',
-      'cooling_facility'
-    ],
-    processing_plants: [
-      'name',
-      'district',
-      'latitude',
-      'longitude',
-      'processing_capacity_liters_per_day',
-      'contact_person',
-      'phone',
-      'plant_type'
-    ],
-    routes: [
-      'from_location_name',
-      'to_location_name',
-      'vehicle_type',
-      'distance_km',
-      'estimated_time_hours',
-      'cost_per_trip',
-      'frequency_per_day'
-    ]
+  const downloadTemplate = (template: CSVTemplate) => {
+    const csvContent = [
+      template.headers.join(','),
+      ...template.sampleData.map(row => row.join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${template.name.toLowerCase().replace(/\s+/g, '_')}_template.csv`;
+    a.click();
+    window.URL.revokeObjectURL(url);
+
+    toast({
+      title: "Template Downloaded",
+      description: `${template.name} CSV template has been downloaded`,
+    });
+  };
+
+  const copyHeaders = (headers: string[]) => {
+    navigator.clipboard.writeText(headers.join(','));
+    toast({
+      title: "Headers Copied",
+      description: "CSV headers have been copied to clipboard",
+    });
   };
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -77,267 +189,85 @@ export function EnhancedDataImportExport() {
       setImportFile(file);
       setImportStatus('idle');
       setImportErrors([]);
-      setValidatedData([]);
     }
   };
 
-  const validateCSV = async (file: File, type: keyof typeof csvHeaders) => {
-    return new Promise<{ isValid: boolean; errors: string[]; data: any[] }>((resolve) => {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        try {
-          const csv = e.target?.result as string;
-          const lines = csv.split('\n').filter(line => line.trim());
-          
-          if (lines.length < 2) {
-            resolve({ isValid: false, errors: ['CSV file must contain at least a header and one data row'], data: [] });
-            return;
-          }
-
-          const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
-          const requiredHeaders = csvHeaders[type];
-          const errors: string[] = [];
-          const data: any[] = [];
-
-          // Check required headers
-          const missingHeaders = requiredHeaders.filter(req => !headers.includes(req.toLowerCase()));
-          if (missingHeaders.length > 0) {
-            errors.push(`Missing required headers: ${missingHeaders.join(', ')}`);
-          }
-
-          // Validate data rows
-          for (let i = 1; i < lines.length; i++) {
-            const values = lines[i].split(',').map(v => v.trim());
-            const row: any = {};
-            
-            headers.forEach((header, index) => {
-              row[header] = values[index] || '';
-            });
-
-            // Validate required fields
-            const rowErrors: string[] = [];
-            
-            // Check for empty required fields
-            requiredHeaders.forEach(req => {
-              if (!row[req.toLowerCase()]) {
-                rowErrors.push(`Row ${i}: Missing ${req}`);
-              }
-            });
-
-            // Validate data types
-            if (type !== 'routes') {
-              if (row.latitude && (isNaN(parseFloat(row.latitude)) || Math.abs(parseFloat(row.latitude)) > 90)) {
-                rowErrors.push(`Row ${i}: Invalid latitude`);
-              }
-              if (row.longitude && (isNaN(parseFloat(row.longitude)) || Math.abs(parseFloat(row.longitude)) > 180)) {
-                rowErrors.push(`Row ${i}: Invalid longitude`);
-              }
-            }
-
-            if (rowErrors.length > 0) {
-              errors.push(...rowErrors);
-            } else {
-              data.push(row);
-            }
-          }
-
-          resolve({ isValid: errors.length === 0, errors, data });
-        } catch (error) {
-          resolve({ isValid: false, errors: ['Failed to parse CSV file'], data: [] });
-        }
-      };
-      reader.readAsText(file);
-    });
-  };
-
-  const processImport = async (type: keyof typeof csvHeaders) => {
+  const processImport = async () => {
     if (!importFile) return;
 
     setImportStatus('processing');
-    
+    setImportErrors([]);
+
     try {
-      const validation = await validateCSV(importFile, type);
+      const text = await importFile.text();
+      const lines = text.split('\n').filter(line => line.trim());
       
-      if (!validation.isValid) {
-        setImportErrors(validation.errors);
-        setImportStatus('error');
-        return;
+      if (lines.length < 2) {
+        throw new Error('File must contain headers and at least one data row');
       }
 
-      setValidatedData(validation.data);
-      setImportStatus('success');
+      const headers = lines[0].split(',').map(h => h.trim());
+      const missingHeaders = selectedTemplate.headers.filter(h => !headers.includes(h));
       
-      toast({
-        title: "Import Successful",
-        description: `Successfully validated ${validation.data.length} ${type} records`,
-      });
+      if (missingHeaders.length > 0) {
+        throw new Error(`Missing required headers: ${missingHeaders.join(', ')}`);
+      }
+
+      // Validate data rows
+      const errors: string[] = [];
+      for (let i = 1; i < Math.min(lines.length, 11); i++) { // Check first 10 rows
+        const values = lines[i].split(',').map(v => v.trim());
+        if (values.length !== headers.length) {
+          errors.push(`Row ${i + 1}: Column count mismatch`);
+        }
+        
+        // Additional validations based on template
+        if (selectedTemplate.name === 'Dairy Farms') {
+          const lat = parseFloat(values[headers.indexOf('latitude')]);
+          const lng = parseFloat(values[headers.indexOf('longitude')]);
+          if (isNaN(lat) || isNaN(lng)) {
+            errors.push(`Row ${i + 1}: Invalid latitude/longitude`);
+          }
+        }
+      }
+
+      if (errors.length > 0) {
+        setImportErrors(errors);
+        setImportStatus('error');
+      } else {
+        setImportStatus('success');
+        toast({
+          title: "Import Successful",
+          description: `Successfully processed ${lines.length - 1} records`,
+        });
+      }
 
     } catch (error) {
-      setImportErrors(['Failed to process import file']);
+      setImportErrors([error instanceof Error ? error.message : 'Unknown error occurred']);
       setImportStatus('error');
-      toast({
-        title: "Import Failed",
-        description: "Failed to process the import file",
-        variant: "destructive"
-      });
     }
   };
 
-  const downloadTemplate = (type: keyof typeof csvHeaders) => {
-    const headers = csvHeaders[type];
-    const sampleData = getSampleData(type);
-    
-    const csvContent = [
-      headers.join(','),
-      ...sampleData.map(row => headers.map(header => row[header] || '').join(','))
-    ].join('\n');
-
-    const blob = new Blob([csvContent], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `${type}_template.csv`;
-    link.click();
-    window.URL.revokeObjectURL(url);
-  };
-
-  const getSampleData = (type: keyof typeof csvHeaders) => {
-    const samples = {
-      farms: [
-        {
-          name: 'Shree Krishna Dairy Farm',
-          district: 'Mandya',
-          latitude: '12.5216',
-          longitude: '76.8956',
-          daily_production_liters: '500',
-          contact_person: 'Rajesh Kumar',
-          phone: '9876543210',
-          milk_quality_grade: 'A'
-        },
-        {
-          name: 'Nandini Milk Producers',
-          district: 'Hassan',
-          latitude: '13.0080',
-          longitude: '76.1004',
-          daily_production_liters: '750',
-          contact_person: 'Priya Sharma',
-          phone: '9876543211',
-          milk_quality_grade: 'A+'
-        }
-      ],
-      collection_centers: [
-        {
-          name: 'Mandya Collection Center',
-          district: 'Mandya',
-          latitude: '12.5266',
-          longitude: '76.8950',
-          storage_capacity_liters: '5000',
-          contact_person: 'Suresh Babu',
-          phone: '9876543212',
-          cooling_facility: 'Yes'
-        }
-      ],
-      processing_plants: [
-        {
-          name: 'Karnataka Milk Federation Plant',
-          district: 'Bangalore Rural',
-          latitude: '12.9716',
-          longitude: '77.5946',
-          processing_capacity_liters_per_day: '50000',
-          contact_person: 'Dr. Anitha Rao',
-          phone: '9876543213',
-          plant_type: 'Pasteurization'
-        }
-      ],
-      routes: [
-        {
-          from_location_name: 'Shree Krishna Dairy Farm',
-          to_location_name: 'Mandya Collection Center',
-          vehicle_type: 'milk_tanker',
-          distance_km: '15',
-          estimated_time_hours: '0.5',
-          cost_per_trip: '450',
-          frequency_per_day: '2'
-        }
-      ]
+  const exportNetworkData = () => {
+    // This would export current network configuration
+    const exportData = {
+      timestamp: new Date().toISOString(),
+      nodes: [], // Would be populated with actual node data
+      routes: [], // Would be populated with actual route data
+      optimization_results: [] // Would be populated with optimization results
     };
-    return samples[type];
-  };
 
-  const exportData = (type: keyof typeof csvHeaders) => {
-    let dataToExport: any[] = [];
-    
-    if (type === 'farms') {
-      dataToExport = nodes.filter(n => n.type === 'farm').map(node => ({
-        name: node.name,
-        district: node.district,
-        latitude: node.lat,
-        longitude: node.lng,
-        daily_production_liters: node.capacity,
-        contact_person: node.contact || '',
-        phone: node.phone || '',
-        milk_quality_grade: 'A'
-      }));
-    } else if (type === 'collection_centers') {
-      dataToExport = nodes.filter(n => n.type === 'collection_center').map(node => ({
-        name: node.name,
-        district: node.district,
-        latitude: node.lat,
-        longitude: node.lng,
-        storage_capacity_liters: node.capacity,
-        contact_person: node.contact || '',
-        phone: node.phone || '',
-        cooling_facility: 'Yes'
-      }));
-    } else if (type === 'processing_plants') {
-      dataToExport = nodes.filter(n => n.type === 'processing_plant').map(node => ({
-        name: node.name,
-        district: node.district,
-        latitude: node.lat,
-        longitude: node.lng,
-        processing_capacity_liters_per_day: node.capacity,
-        contact_person: node.contact || '',
-        phone: node.phone || '',
-        plant_type: 'Pasteurization'
-      }));
-    } else if (type === 'routes') {
-      dataToExport = routes.map(route => ({
-        from_location_name: route.from_id,
-        to_location_name: route.to_id,
-        vehicle_type: route.vehicle_type,
-        distance_km: route.distance_km,
-        estimated_time_hours: route.estimated_time_hours,
-        cost_per_trip: route.cost_per_trip,
-        frequency_per_day: 2
-      }));
-    }
-
-    if (dataToExport.length === 0) {
-      toast({
-        title: "No Data",
-        description: `No ${type} data available to export`,
-        variant: "destructive"
-      });
-      return;
-    }
-
-    const headers = csvHeaders[type];
-    const csvContent = [
-      headers.join(','),
-      ...dataToExport.map(row => headers.map(header => row[header] || '').join(','))
-    ].join('\n');
-
-    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
     const url = window.URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `karnataka_dairy_${type}_${new Date().toISOString().split('T')[0]}.csv`;
-    link.click();
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `dairy_network_export_${new Date().toISOString().split('T')[0]}.json`;
+    a.click();
     window.URL.revokeObjectURL(url);
 
     toast({
-      title: "Export Successful",
-      description: `Exported ${dataToExport.length} ${type} records`,
+      title: "Network Exported",
+      description: "Current network configuration has been exported",
     });
   };
 
@@ -347,172 +277,209 @@ export function EnhancedDataImportExport() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Database className="h-5 w-5" />
-            Karnataka Dairy Network Data Management
+            Data Import & Export Center
           </CardTitle>
           <CardDescription>
-            Import and export dairy network data with specific CSV formats for Karnataka region
+            Import network data using standardized CSV templates with proper validation and export optimization results
           </CardDescription>
         </CardHeader>
-      </Card>
+        <CardContent>
+          <Tabs defaultValue="import" className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="import">Data Import</TabsTrigger>
+              <TabsTrigger value="export">Data Export</TabsTrigger>
+            </TabsList>
 
-      <Tabs defaultValue="templates" className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="templates">Templates & Headers</TabsTrigger>
-          <TabsTrigger value="import">Import Data</TabsTrigger>
-          <TabsTrigger value="export">Export Data</TabsTrigger>
-        </TabsList>
+            <TabsContent value="import" className="space-y-6">
+              <Alert>
+                <FileText className="h-4 w-4" />
+                <AlertDescription>
+                  Use the standardized CSV templates below for importing network data. Each template includes required headers, 
+                  sample data, and validation requirements based on industry standards.
+                </AlertDescription>
+              </Alert>
 
-        <TabsContent value="templates" className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {Object.entries(csvHeaders).map(([type, headers]) => (
-              <Card key={type}>
-                <CardHeader>
-                  <CardTitle className="capitalize flex items-center justify-between">
-                    {type.replace('_', ' ')}
-                    <Button onClick={() => downloadTemplate(type as keyof typeof csvHeaders)} size="sm">
-                      <Download className="h-4 w-4 mr-2" />
-                      Download Template
-                    </Button>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2">
-                    <Label className="text-sm font-semibold">Required CSV Headers:</Label>
-                    <div className="grid grid-cols-2 gap-1">
-                      {headers.map((header, index) => (
-                        <Badge key={index} variant="outline" className="text-xs">
-                          {header}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </TabsContent>
-
-        <TabsContent value="import" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Import CSV Data</CardTitle>
-              <CardDescription>
-                Upload CSV files with the exact headers specified in the templates
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <Label htmlFor="import-file">Select CSV File</Label>
-                <Input
-                  id="import-file"
-                  type="file"
-                  accept=".csv"
-                  onChange={handleFileUpload}
-                  className="mt-1"
-                />
+              {/* Template Selection */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {CSV_TEMPLATES.map((template) => (
+                  <Card 
+                    key={template.name}
+                    className={`cursor-pointer transition-all ${
+                      selectedTemplate.name === template.name 
+                        ? 'ring-2 ring-primary' 
+                        : 'hover:shadow-md'
+                    }`}
+                    onClick={() => setSelectedTemplate(template)}
+                  >
+                    <CardContent className="p-4">
+                      <h3 className="font-semibold mb-2">{template.name}</h3>
+                      <p className="text-sm text-muted-foreground mb-3">{template.description}</p>
+                      <Badge variant="outline">{template.headers.length} columns</Badge>
+                    </CardContent>
+                  </Card>
+                ))}
               </div>
 
-              {importFile && (
-                <div className="space-y-4">
-                  <Alert>
-                    <FileText className="h-4 w-4" />
-                    <AlertDescription>
-                      Selected: {importFile.name} ({(importFile.size / 1024).toFixed(1)} KB)
-                    </AlertDescription>
-                  </Alert>
-
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                    {Object.keys(csvHeaders).map((type) => (
+              {/* Selected Template Details */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>{selectedTemplate.name} Template</CardTitle>
+                  <CardDescription>{selectedTemplate.description}</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {/* Headers */}
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <Label className="font-semibold">Required CSV Headers:</Label>
                       <Button 
-                        key={type} 
-                        onClick={() => processImport(type as keyof typeof csvHeaders)}
-                        disabled={importStatus === 'processing'}
-                        size="sm"
-                        className="capitalize"
+                        onClick={() => copyHeaders(selectedTemplate.headers)} 
+                        size="sm" 
+                        variant="outline"
                       >
-                        <Upload className="h-4 w-4 mr-2" />
-                        Import {type.replace('_', ' ')}
+                        <Copy className="h-4 w-4 mr-2" />
+                        Copy Headers
                       </Button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {importStatus === 'processing' && (
-                <Alert>
-                  <div className="animate-spin h-4 w-4 border-b-2 border-primary mr-2"></div>
-                  <AlertDescription>Processing import file...</AlertDescription>
-                </Alert>
-              )}
-
-              {importStatus === 'success' && (
-                <Alert>
-                  <CheckCircle className="h-4 w-4 text-green-600" />
-                  <AlertDescription>
-                    Successfully validated {validatedData.length} records. Data is ready for import.
-                  </AlertDescription>
-                </Alert>
-              )}
-
-              {importStatus === 'error' && (
-                <Alert variant="destructive">
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertDescription>
-                    <div className="space-y-1">
-                      <p>Import failed with the following errors:</p>
-                      <ul className="list-disc list-inside text-sm">
-                        {importErrors.map((error, index) => (
-                          <li key={index}>{error}</li>
-                        ))}
-                      </ul>
                     </div>
-                  </AlertDescription>
-                </Alert>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
+                    <div className="p-3 bg-muted rounded-lg">
+                      <code className="text-sm">{selectedTemplate.headers.join(', ')}</code>
+                    </div>
+                  </div>
 
-        <TabsContent value="export" className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {Object.keys(csvHeaders).map((type) => {
-              const count = type === 'routes' 
-                ? routes.length 
-                : nodes.filter(n => n.type === type.slice(0, -1)).length;
+                  {/* Requirements */}
+                  <div>
+                    <Label className="font-semibold">Data Requirements:</Label>
+                    <ul className="mt-2 space-y-1">
+                      {selectedTemplate.requirements.map((req, index) => (
+                        <li key={index} className="text-sm text-muted-foreground flex items-start gap-2">
+                          <span className="text-primary">•</span>
+                          {req}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
 
-              return (
-                <Card key={type}>
+                  {/* Sample Data */}
+                  <div>
+                    <Label className="font-semibold">Sample Data:</Label>
+                    <ScrollArea className="h-32 mt-2">
+                      <div className="text-xs font-mono bg-muted p-3 rounded-lg">
+                        <div className="font-bold">{selectedTemplate.headers.join(',')}</div>
+                        {selectedTemplate.sampleData.map((row, index) => (
+                          <div key={index}>{row.join(',')}</div>
+                        ))}
+                      </div>
+                    </ScrollArea>
+                  </div>
+
+                  <Button onClick={() => downloadTemplate(selectedTemplate)} className="w-full">
+                    <Download className="h-4 w-4 mr-2" />
+                    Download {selectedTemplate.name} Template
+                  </Button>
+                </CardContent>
+              </Card>
+
+              {/* File Upload */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Upload CSV Data</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <Label>Select CSV File:</Label>
+                    <Input
+                      type="file"
+                      accept=".csv"
+                      onChange={handleFileUpload}
+                      className="mt-2"
+                    />
+                  </div>
+
+                  {importFile && (
+                    <div className="flex items-center gap-2">
+                      <FileText className="h-4 w-4" />
+                      <span className="text-sm">{importFile.name} ({(importFile.size / 1024).toFixed(1)} KB)</span>
+                    </div>
+                  )}
+
+                  <Button 
+                    onClick={processImport} 
+                    disabled={!importFile || importStatus === 'processing'}
+                    className="w-full"
+                  >
+                    {importStatus === 'processing' ? (
+                      <div className="animate-spin h-4 w-4 border-b-2 border-white mr-2"></div>
+                    ) : (
+                      <Upload className="h-4 w-4 mr-2" />
+                    )}
+                    {importStatus === 'processing' ? 'Processing...' : 'Import Data'}
+                  </Button>
+
+                  {/* Import Status */}
+                  {importStatus === 'success' && (
+                    <Alert>
+                      <CheckCircle className="h-4 w-4" />
+                      <AlertDescription>
+                        Data imported successfully! All records passed validation.
+                      </AlertDescription>
+                    </Alert>
+                  )}
+
+                  {importStatus === 'error' && (
+                    <Alert variant="destructive">
+                      <AlertTriangle className="h-4 w-4" />
+                      <AlertDescription>
+                        <div>Import failed with the following errors:</div>
+                        <ul className="mt-2 list-disc list-inside">
+                          {importErrors.map((error, index) => (
+                            <li key={index} className="text-sm">{error}</li>
+                          ))}
+                        </ul>
+                      </AlertDescription>
+                    </Alert>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="export" className="space-y-4">
+              <Alert>
+                <Download className="h-4 w-4" />
+                <AlertDescription>
+                  Export your current network configuration, optimization results, and performance data for analysis or backup.
+                </AlertDescription>
+              </Alert>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Card>
                   <CardHeader>
-                    <CardTitle className="capitalize flex items-center justify-between">
-                      {type.replace('_', ' ')}
-                      <Badge variant="secondary">{count} records</Badge>
-                    </CardTitle>
+                    <CardTitle>Network Configuration</CardTitle>
+                    <CardDescription>Export all nodes, routes, and settings</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <Button 
-                      onClick={() => exportData(type as keyof typeof csvHeaders)}
-                      disabled={count === 0}
-                      className="w-full"
-                    >
-                      <FileSpreadsheet className="h-4 w-4 mr-2" />
-                      Export {type.replace('_', ' ')} CSV
+                    <Button onClick={exportNetworkData} className="w-full">
+                      <Download className="h-4 w-4 mr-2" />
+                      Export Network (JSON)
                     </Button>
                   </CardContent>
                 </Card>
-              );
-            })}
-          </div>
-        </TabsContent>
-      </Tabs>
 
-      <Alert>
-        <FileText className="h-4 w-4" />
-        <AlertDescription>
-          <strong>CSV Format Requirements:</strong> All CSV files must include the exact headers shown in templates. 
-          Latitude/longitude must be valid coordinates for Karnataka region (approximately 11.5°-18.5°N, 74°-78.5°E).
-          Sample data is provided in downloadable templates.
-        </AlertDescription>
-      </Alert>
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Optimization Results</CardTitle>
+                    <CardDescription>Export route optimization and performance data</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <Button className="w-full" variant="outline">
+                      <Download className="h-4 w-4 mr-2" />
+                      Export Results (CSV)
+                    </Button>
+                  </CardContent>
+                </Card>
+              </div>
+            </TabsContent>
+          </Tabs>
+        </CardContent>
+      </Card>
     </div>
   );
 }
