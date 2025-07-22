@@ -11,7 +11,6 @@ import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { useDairyData } from '@/hooks/useDairyData';
 import { useWeatherData } from '@/hooks/useWeatherData';
-import { NetworkNode } from '@/types/products';
 import { dairyProducts, vehicleTypes } from '@/data/dairyProducts';
 import { ProductManagement } from './ProductManagement';
 import { EnhancedSupplyChainMap, EnhancedMapNode } from './EnhancedSupplyChainMap';
@@ -30,7 +29,8 @@ import {
   TrendingUp,
   AlertTriangle,
   Clock,
-  Thermometer
+  Thermometer,
+  Activity
 } from 'lucide-react';
 
 interface OptimizationConstraints {
@@ -53,6 +53,20 @@ interface OptimizedRoute {
   products: string[];
   efficiency: 'optimal' | 'good' | 'poor';
   weatherImpact: number;
+}
+
+interface NetworkNode {
+  id: string;
+  name: string;
+  type: string;
+  lat: number;
+  lng: number;
+  capacity: number;
+  production?: number;
+  district?: string;
+  contact?: string;
+  phone?: string;
+  isVisible?: boolean;
 }
 
 interface InteractiveNetworkMapProps {

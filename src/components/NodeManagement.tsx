@@ -16,9 +16,6 @@ import {
   Trash2, 
   Eye, 
   EyeOff,
-  Factory,
-  Truck,
-  Store
 } from 'lucide-react';
 
 interface NetworkNode {
