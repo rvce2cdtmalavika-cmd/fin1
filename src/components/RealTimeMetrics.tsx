@@ -85,7 +85,7 @@ export function RealTimeMetrics({
     <div className="space-y-4">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* Cost Metrics */}
-        <Card className={animationTrigger > 0 ? 'animate-pulse' : ''}>
+        <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium flex items-center gap-2">
               <DollarSign className="h-4 w-4" />
@@ -104,7 +104,7 @@ export function RealTimeMetrics({
         </Card>
 
         {/* Time Metrics */}
-        <Card className={animationTrigger > 0 ? 'animate-pulse' : ''}>
+        <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium flex items-center gap-2">
               <Clock className="h-4 w-4" />
@@ -123,7 +123,7 @@ export function RealTimeMetrics({
         </Card>
 
         {/* Quality Score */}
-        <Card className={animationTrigger > 0 ? 'animate-pulse' : ''}>
+        <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium flex items-center gap-2">
               <Thermometer className="h-4 w-4" />

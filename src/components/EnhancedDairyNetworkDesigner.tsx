@@ -25,7 +25,7 @@ export function EnhancedDairyNetworkDesigner() {
   const { weatherData, isLoading: isWeatherLoading } = useWeatherData();
   const [activeTab, setActiveTab] = useState('network');
   const [selectedProducts, setSelectedProducts] = useState<string[]>(['whole-milk']);
-  const [selectedVehicles, setSelectedVehicles] = useState<string[]>(['refrigerated-truck']);
+  const [selectedVehicles, setSelectedVehicles] = useState<string[]>(['medium-refrigerated-truck']);
 
   if (isLoading) {
     return (

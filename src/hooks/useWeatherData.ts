@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { WeatherConditions } from '@/types/products';
 
 // Using OpenWeatherMap API for real-time weather data
-const WEATHER_API_KEY = ''; // User will need to provide this
+const WEATHER_API_KEY = ''; // TODO: Add your OpenWeatherMap API key here for real weather data
 const WEATHER_API_URL = 'https://api.openweathermap.org/data/2.5/weather';
 
 export function useWeatherData(lat: number = 12.9716, lng: number = 77.5946) {
