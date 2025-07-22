@@ -1,7 +1,6 @@
 import React from 'react';
 import { Polyline, Marker } from 'react-leaflet';
 import { divIcon } from 'leaflet';
-import { Badge } from '@/components/ui/badge';
 
 interface OptimalRouteProps {
   route: Array<{ lat: number; lng: number; name: string; type: string }>;
@@ -85,8 +84,7 @@ export function OptimalRouteVisualization({ route, totalDistance, totalCost, eff
           key={`route-${index}`}
           position={[point.lat, point.lng]}
           icon={createRouteMarker(index, index === 0, index === route.length - 1)}
-        >
-        </Marker>
+        />
       ))}
     </>
   );
