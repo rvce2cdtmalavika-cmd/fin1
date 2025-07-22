@@ -17,15 +17,17 @@ import {
   DollarSign,
   RefreshCw,
   CheckCircle,
-  AlertCircle
+  AlertCircle,
+  Thermometer,
+  Target
 } from 'lucide-react';
 
 interface OptimizationParams {
-  costWeight: number;
-  timeWeight: number;
-  qualityWeight: number;
-  maxRouteDistance: number;
-  vehicleCapacity: number;
+  maxDistanceKm: number;
+  maxDeliveryTimeHours: number;
+  costPerKm: number;
+  temperatureThresholdC: number;
+  qualityRetentionPercent: number;
 }
 
 interface OptimizationResult {
@@ -35,6 +37,7 @@ interface OptimizationResult {
   routesOptimized: number;
   costSavings: number;
   timeSavings: number;
+  qualityScore: number;
   recommendations: string[];
 }
 
@@ -43,11 +46,11 @@ export function DairyOptimizationEngine() {
   const [isOptimizing, setIsOptimizing] = useState(false);
   const [optimizationResult, setOptimizationResult] = useState<OptimizationResult | null>(null);
   const [params, setParams] = useState<OptimizationParams>({
-    costWeight: 40,
-    timeWeight: 30,
-    qualityWeight: 30,
-    maxRouteDistance: 50,
-    vehicleCapacity: 5000
+    maxDistanceKm: 50,
+    maxDeliveryTimeHours: 8,
+    costPerKm: 15,
+    temperatureThresholdC: 4,
+    qualityRetentionPercent: 95
   });
   const { toast } = useToast();
 
@@ -64,78 +67,124 @@ export function DairyOptimizationEngine() {
     return R * c;
   };
 
-  // Find optimal collection routes using greedy algorithm
-  const optimizeCollectionRoutes = (farms: any[], centers: any[], plants: any[]) => {
+  // Find optimal collection routes using enhanced algorithm
+  const optimizeCollectionRoutes = (farms: any[], centers: any[], plants: any[], distributors: any[]) => {
     const optimizedRoutes = [];
     let totalCost = 0;
     let totalTime = 0;
     let totalDistance = 0;
+    let qualityScores = [];
 
-    // For each farm, find the nearest collection center
+    // Farm to Collection Center optimization
     farms.forEach(farm => {
-      let nearestCenter = null;
-      let minDistance = Infinity;
+      let bestCenter = null;
+      let minCost = Infinity;
+      let bestDistance = 0;
 
       centers.forEach(center => {
         const distance = calculateDistance(farm.lat, farm.lng, center.lat, center.lng);
-        if (distance < minDistance && distance <= params.maxRouteDistance) {
-          minDistance = distance;
-          nearestCenter = center;
+        if (distance <= params.maxDistanceKm) {
+          const routeCost = distance * params.costPerKm;
+          const deliveryTime = distance / 40; // 40 km/h average speed
+          
+          if (routeCost < minCost && deliveryTime <= params.maxDeliveryTimeHours) {
+            minCost = routeCost;
+            bestCenter = center;
+            bestDistance = distance;
+          }
         }
       });
 
-      if (nearestCenter) {
-        const routeCost = minDistance * 15; // ₹15 per km
-        const routeTime = minDistance / 40; // 40 km/h average speed
+      if (bestCenter) {
+        const routeTime = bestDistance / 40;
+        const qualityScore = Math.max(70, params.qualityRetentionPercent - (routeTime * 2));
         
         optimizedRoutes.push({
           from: farm,
-          to: nearestCenter,
-          distance: minDistance,
-          cost: routeCost,
+          to: bestCenter,
+          distance: bestDistance,
+          cost: minCost,
           time: routeTime,
-          type: 'farm_to_center'
+          type: 'farm_to_center',
+          qualityScore
         });
 
-        totalCost += routeCost;
+        totalCost += minCost;
         totalTime += routeTime;
-        totalDistance += minDistance;
+        totalDistance += bestDistance;
+        qualityScores.push(qualityScore);
       }
     });
 
-    // For each collection center, find the nearest processing plant
+    // Collection Center to Processing Plant optimization
     centers.forEach(center => {
-      let nearestPlant = null;
-      let minDistance = Infinity;
+      let bestPlant = null;
+      let minCost = Infinity;
+      let bestDistance = 0;
 
       plants.forEach(plant => {
         const distance = calculateDistance(center.lat, center.lng, plant.lat, plant.lng);
-        if (distance < minDistance) {
-          minDistance = distance;
-          nearestPlant = plant;
+        const routeCost = distance * (params.costPerKm * 1.2); // Higher cost for processing transport
+        const deliveryTime = distance / 45; // 45 km/h average speed
+        
+        if (routeCost < minCost && deliveryTime <= params.maxDeliveryTimeHours) {
+          minCost = routeCost;
+          bestPlant = plant;
+          bestDistance = distance;
         }
       });
 
-      if (nearestPlant) {
-        const routeCost = minDistance * 20; // ₹20 per km for center to plant
-        const routeTime = minDistance / 45; // 45 km/h average speed
+      if (bestPlant) {
+        const routeTime = bestDistance / 45;
+        const qualityScore = Math.max(80, params.qualityRetentionPercent - (routeTime * 1.5));
         
         optimizedRoutes.push({
           from: center,
-          to: nearestPlant,
-          distance: minDistance,
-          cost: routeCost,
+          to: bestPlant,
+          distance: bestDistance,
+          cost: minCost,
           time: routeTime,
-          type: 'center_to_plant'
+          type: 'center_to_plant',
+          qualityScore
         });
 
-        totalCost += routeCost;
+        totalCost += minCost;
         totalTime += routeTime;
-        totalDistance += minDistance;
+        totalDistance += bestDistance;
+        qualityScores.push(qualityScore);
       }
     });
 
-    return { optimizedRoutes, totalCost, totalTime, totalDistance };
+    // Processing Plant to Distributor optimization
+    plants.forEach(plant => {
+      distributors.forEach(distributor => {
+        const distance = calculateDistance(plant.lat, plant.lng, distributor.lat, distributor.lng);
+        if (distance <= params.maxDistanceKm * 1.5) { // Allow longer distances for final distribution
+          const routeCost = distance * (params.costPerKm * 0.8); // Lower cost for final distribution
+          const routeTime = distance / 50; // 50 km/h average speed
+          const qualityScore = Math.max(85, params.qualityRetentionPercent - (routeTime * 1));
+          
+          optimizedRoutes.push({
+            from: plant,
+            to: distributor,
+            distance: distance,
+            cost: routeCost,
+            time: routeTime,
+            type: 'plant_to_distributor',
+            qualityScore
+          });
+
+          totalCost += routeCost;
+          totalTime += routeTime;
+          totalDistance += distance;
+          qualityScores.push(qualityScore);
+        }
+      });
+    });
+
+    const averageQuality = qualityScores.length > 0 ? qualityScores.reduce((a, b) => a + b, 0) / qualityScores.length : 0;
+
+    return { optimizedRoutes, totalCost, totalTime, totalDistance, averageQuality };
   };
 
   // Calculate current network performance for comparison
@@ -172,9 +221,10 @@ export function DairyOptimizationEngine() {
       const farms = nodes.filter(n => n.type === 'farm');
       const centers = nodes.filter(n => n.type === 'collection_center');
       const plants = nodes.filter(n => n.type === 'processing_plant');
+      const distributors = nodes.filter(n => n.type === 'distributor');
 
       // Run optimization algorithm
-      const optimization = optimizeCollectionRoutes(farms, centers, plants);
+      const optimization = optimizeCollectionRoutes(farms, centers, plants, distributors);
       const current = calculateCurrentPerformance();
 
       // Calculate savings
@@ -184,20 +234,28 @@ export function DairyOptimizationEngine() {
       // Generate recommendations based on analysis
       const recommendations = [];
       
-      if (optimization.totalDistance / optimization.optimizedRoutes.length > 25) {
+      if (optimization.totalDistance / optimization.optimizedRoutes.length > params.maxDistanceKm * 0.8) {
         recommendations.push("Consider adding more collection centers to reduce average route distances");
       }
       
-      if (farms.length > centers.length * 5) {
-        recommendations.push("Farm to collection center ratio is high - add more collection centers");
+      if (farms.length > centers.length * 4) {
+        recommendations.push("Farm to collection center ratio is high - consider adding more collection centers");
       }
       
-      if (centers.length > plants.length * 3) {
+      if (centers.length > plants.length * 2) {
         recommendations.push("Consider adding processing capacity or optimizing plant locations");
+      }
+
+      if (plants.length > distributors.length && distributors.length > 0) {
+        recommendations.push("Consider adding distribution hubs to improve final delivery efficiency");
       }
 
       if (costSavings > current.currentCost * 0.1) {
         recommendations.push("Significant cost savings possible through route optimization");
+      }
+
+      if (optimization.averageQuality < params.qualityRetentionPercent) {
+        recommendations.push("Quality targets may not be met - consider temperature-controlled vehicles");
       }
 
       const result: OptimizationResult = {
@@ -207,6 +265,7 @@ export function DairyOptimizationEngine() {
         routesOptimized: optimization.optimizedRoutes.length,
         costSavings,
         timeSavings,
+        qualityScore: optimization.averageQuality,
         recommendations
       };
 
@@ -260,48 +319,67 @@ export function DairyOptimizationEngine() {
               
               <div className="space-y-4">
                 <div>
-                  <Label>Cost Weight: {params.costWeight}%</Label>
+                  <Label className="flex items-center gap-2">
+                    <Target className="h-4 w-4" />
+                    Maximum Distance: {params.maxDistanceKm}km
+                  </Label>
                   <Slider
-                    value={[params.costWeight]}
-                    onValueChange={([value]) => setParams(prev => ({ ...prev, costWeight: value }))}
-                    max={100}
-                    step={5}
-                    className="mt-2"
-                  />
-                </div>
-                
-                <div>
-                  <Label>Time Weight: {params.timeWeight}%</Label>
-                  <Slider
-                    value={[params.timeWeight]}
-                    onValueChange={([value]) => setParams(prev => ({ ...prev, timeWeight: value }))}
-                    max={100}
-                    step={5}
-                    className="mt-2"
-                  />
-                </div>
-                
-                <div>
-                  <Label>Quality Weight: {params.qualityWeight}%</Label>
-                  <Slider
-                    value={[params.qualityWeight]}
-                    onValueChange={([value]) => setParams(prev => ({ ...prev, qualityWeight: value }))}
-                    max={100}
-                    step={5}
-                    className="mt-2"
-                  />
-                </div>
-                
-                <div>
-                  <Label>Max Route Distance: {params.maxRouteDistance}km</Label>
-                  <Slider
-                    value={[params.maxRouteDistance]}
-                    onValueChange={([value]) => setParams(prev => ({ ...prev, maxRouteDistance: value }))}
+                    value={[params.maxDistanceKm]}
+                    onValueChange={([value]) => setParams(prev => ({ ...prev, maxDistanceKm: value }))}
                     min={10}
-                    max={100}
+                    max={200}
                     step={5}
                     className="mt-2"
                   />
+                  <p className="text-xs text-muted-foreground mt-1">Maximum allowed route distance</p>
+                </div>
+                
+                <div>
+                  <Label className="flex items-center gap-2">
+                    <Clock className="h-4 w-4" />
+                    Max Delivery Time: {params.maxDeliveryTimeHours}h
+                  </Label>
+                  <Slider
+                    value={[params.maxDeliveryTimeHours]}
+                    onValueChange={([value]) => setParams(prev => ({ ...prev, maxDeliveryTimeHours: value }))}
+                    min={1}
+                    max={24}
+                    step={0.5}
+                    className="mt-2"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">Maximum delivery time allowed</p>
+                </div>
+                
+                <div>
+                  <Label className="flex items-center gap-2">
+                    <DollarSign className="h-4 w-4" />
+                    Cost per Kilometer: ₹{params.costPerKm}
+                  </Label>
+                  <Slider
+                    value={[params.costPerKm]}
+                    onValueChange={([value]) => setParams(prev => ({ ...prev, costPerKm: value }))}
+                    min={5}
+                    max={50}
+                    step={1}
+                    className="mt-2"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">Transportation cost per kilometer</p>
+                </div>
+                
+                <div>
+                  <Label className="flex items-center gap-2">
+                    <Thermometer className="h-4 w-4" />
+                    Temperature Threshold: {params.temperatureThresholdC}°C
+                  </Label>
+                  <Slider
+                    value={[params.temperatureThresholdC]}
+                    onValueChange={([value]) => setParams(prev => ({ ...prev, temperatureThresholdC: value }))}
+                    min={-5}
+                    max={25}
+                    step={1}
+                    className="mt-2"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">Maximum temperature for quality maintenance</p>
                 </div>
               </div>
             </div>
@@ -310,20 +388,20 @@ export function DairyOptimizationEngine() {
               <h3 className="font-semibold">Current Network Status</h3>
               <div className="grid grid-cols-2 gap-4">
                 <div className="p-3 bg-muted rounded-lg">
-                  <p className="text-sm text-muted-foreground">Farms</p>
+                  <p className="text-sm text-muted-foreground">🐄 Farms</p>
                   <p className="text-2xl font-bold">{nodes.filter(n => n.type === 'farm').length}</p>
                 </div>
                 <div className="p-3 bg-muted rounded-lg">
-                  <p className="text-sm text-muted-foreground">Centers</p>
+                  <p className="text-sm text-muted-foreground">🏭 Centers</p>
                   <p className="text-2xl font-bold">{nodes.filter(n => n.type === 'collection_center').length}</p>
                 </div>
                 <div className="p-3 bg-muted rounded-lg">
-                  <p className="text-sm text-muted-foreground">Plants</p>
+                  <p className="text-sm text-muted-foreground">⚙️ Plants</p>
                   <p className="text-2xl font-bold">{nodes.filter(n => n.type === 'processing_plant').length}</p>
                 </div>
                 <div className="p-3 bg-muted rounded-lg">
-                  <p className="text-sm text-muted-foreground">Routes</p>
-                  <p className="text-2xl font-bold">{routes.length}</p>
+                  <p className="text-sm text-muted-foreground">📦 Distributors</p>
+                  <p className="text-2xl font-bold">{nodes.filter(n => n.type === 'distributor').length}</p>
                 </div>
               </div>
               
@@ -338,7 +416,7 @@ export function DairyOptimizationEngine() {
                 ) : (
                   <Zap className="h-4 w-4 mr-2" />
                 )}
-                {isOptimizing ? 'Optimizing Network...' : 'Run Optimization'}
+                {isOptimizing ? 'Optimizing Network...' : 'Run Network Optimization'}
               </Button>
             </div>
           </div>
@@ -353,7 +431,7 @@ export function DairyOptimizationEngine() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
                   <div className="text-center">
                     <div className="text-2xl font-bold text-green-600">₹{optimizationResult.costSavings.toFixed(0)}</div>
                     <div className="text-sm text-muted-foreground">Cost Savings</div>
@@ -369,6 +447,10 @@ export function DairyOptimizationEngine() {
                   <div className="text-center">
                     <div className="text-2xl font-bold text-orange-600">{optimizationResult.totalDistance.toFixed(0)}km</div>
                     <div className="text-sm text-muted-foreground">Total Distance</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-indigo-600">{optimizationResult.qualityScore.toFixed(0)}%</div>
+                    <div className="text-sm text-muted-foreground">Quality Score</div>
                   </div>
                 </div>
 
@@ -397,10 +479,11 @@ export function DairyOptimizationEngine() {
             <CardContent>
               <div className="space-y-3 text-sm">
                 <p><strong>Distance Calculation:</strong> Uses Haversine formula for accurate geographic distances</p>
-                <p><strong>Route Optimization:</strong> Greedy algorithm finding nearest facilities within constraints</p>
-                <p><strong>Cost Model:</strong> ₹15/km for farm-to-center, ₹20/km for center-to-plant routes</p>
-                <p><strong>Speed Assumptions:</strong> 40 km/h for collection routes, 45 km/h for transport routes</p>
-                <p><strong>Constraints:</strong> Maximum route distance, vehicle capacity, and cooling requirements</p>
+                <p><strong>Route Optimization:</strong> Multi-stage optimization considering farms → centers → plants → distributors</p>
+                <p><strong>Cost Model:</strong> ₹{params.costPerKm}/km base rate with adjustments for route type and requirements</p>
+                <p><strong>Speed Assumptions:</strong> 40 km/h collection, 45 km/h processing transport, 50 km/h distribution</p>
+                <p><strong>Quality Tracking:</strong> Real-time quality score based on time and temperature constraints</p>
+                <p><strong>Constraints:</strong> Configurable distance, time, cost, and quality thresholds</p>
               </div>
             </CardContent>
           </Card>

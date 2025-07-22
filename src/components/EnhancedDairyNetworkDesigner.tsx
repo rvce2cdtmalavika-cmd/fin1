@@ -5,21 +5,27 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useDairyData } from '@/hooks/useDairyData';
+import { useWeatherData } from '@/hooks/useWeatherData';
 import { InteractiveNetworkMap } from './InteractiveNetworkMap';
 import { EssentialNetworkMetrics } from './EssentialNetworkMetrics';
 import { EnhancedDataImportExport } from './EnhancedDataImportExport';
+import { RealTimeMetrics } from './RealTimeMetrics';
 import { 
   Network, 
   BarChart3, 
   Database, 
   Map,
   CheckCircle,
-  Info
+  Info,
+  CloudSun
 } from 'lucide-react';
 
 export function EnhancedDairyNetworkDesigner() {
   const { nodes, routes, isLoading } = useDairyData();
+  const { weatherData, isLoading: isWeatherLoading } = useWeatherData();
   const [activeTab, setActiveTab] = useState('network');
+  const [selectedProducts, setSelectedProducts] = useState<string[]>(['whole-milk']);
+  const [selectedVehicles, setSelectedVehicles] = useState<string[]>(['refrigerated-truck']);
 
   if (isLoading) {
     return (
@@ -45,25 +51,39 @@ export function EnhancedDairyNetworkDesigner() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
             <div className="text-center">
-              <div className="text-2xl font-bold text-green-600">{nodes.filter(n => n.type === 'farm').length}</div>
+              <div className="text-2xl font-bold text-green-600 flex items-center justify-center gap-1">
+                🐄 {nodes.filter(n => n.type === 'farm').length}
+              </div>
               <div className="text-sm text-muted-foreground">Dairy Farms</div>
             </div>
             <div className="text-center">
-              <div className="text-2xl font-bold text-blue-600">{nodes.filter(n => n.type === 'collection_center').length}</div>
+              <div className="text-2xl font-bold text-blue-600 flex items-center justify-center gap-1">
+                🏭 {nodes.filter(n => n.type === 'collection_center').length}
+              </div>
               <div className="text-sm text-muted-foreground">Collection Centers</div>
             </div>
             <div className="text-center">
-              <div className="text-2xl font-bold text-purple-600">{nodes.filter(n => n.type === 'processing_plant').length}</div>
+              <div className="text-2xl font-bold text-purple-600 flex items-center justify-center gap-1">
+                ⚙️ {nodes.filter(n => n.type === 'processing_plant').length}
+              </div>
               <div className="text-sm text-muted-foreground">Processing Plants</div>
             </div>
             <div className="text-center">
-              <div className="text-2xl font-bold text-orange-600">0</div>
+              <div className="text-2xl font-bold text-orange-600 flex items-center justify-center gap-1">
+                📦 {nodes.filter(n => n.type === 'distributor').length}
+              </div>
               <div className="text-sm text-muted-foreground">Distributors</div>
             </div>
             <div className="text-center">
-              <div className="text-2xl font-bold text-red-600">{routes.length}</div>
+              <div className="text-2xl font-bold text-red-600 flex items-center justify-center gap-1">
+                🏪 {nodes.filter(n => n.type === 'retail').length}
+              </div>
+              <div className="text-sm text-muted-foreground">Retail Shops</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-indigo-600">🛣️ {routes.length}</div>
               <div className="text-sm text-muted-foreground">Active Routes</div>
             </div>
           </div>
@@ -80,19 +100,37 @@ export function EnhancedDairyNetworkDesigner() {
               <Badge variant="outline">
                 Weather-Aware Optimization
               </Badge>
+              <Badge variant="outline">
+                Real-time Analytics
+              </Badge>
             </div>
+            
+            {weatherData && !isWeatherLoading && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <CloudSun className="h-4 w-4" />
+                {weatherData.temperature}°C, {weatherData.humidity}% humidity
+              </div>
+            )}
           </div>
 
           <Alert className="mt-4">
             <Info className="h-4 w-4" />
             <AlertDescription>
-              This system supports comprehensive dairy supply chain optimization including farms, collection centers, 
-              processing plants, distributors, and retail outlets. Real-time weather data affects spoilage calculations. 
+              This system supports comprehensive dairy supply chain optimization including farms (🐄), collection centers (🏭), 
+              processing plants (⚙️), distributors (📦), and retail outlets (🏪). Real-time weather data affects spoilage calculations. 
               Peak collection times (6-9 AM, 5-8 PM) are automatically considered for routing efficiency.
             </AlertDescription>
           </Alert>
         </CardContent>
       </Card>
+
+      {/* Real-time Metrics Dashboard */}
+      <RealTimeMetrics
+        selectedProducts={selectedProducts}
+        selectedVehicles={selectedVehicles}
+        routes={routes}
+        weatherData={weatherData}
+      />
 
       {/* Main Content Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
