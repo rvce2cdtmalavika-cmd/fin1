@@ -129,6 +129,7 @@ export function EnhancedDairyNetworkDesigner() {
         selectedProducts={selectedProducts}
         selectedVehicles={selectedVehicles}
         routes={routes}
+        nodes={nodes}
         weatherData={weatherData}
       />
 

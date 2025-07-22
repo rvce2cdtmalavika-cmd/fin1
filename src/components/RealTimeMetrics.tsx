@@ -3,6 +3,7 @@ import React, { useMemo, useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
+import { useDynamicMetrics } from './DynamicMetricsCalculator';
 import { dairyProducts } from '@/data/dairyProducts';
 import { 
   TrendingUp, 
@@ -13,91 +14,41 @@ import {
   AlertTriangle
 } from 'lucide-react';
 
+interface NetworkNode {
+  id: string;
+  type: string;
+  capacity: number;
+  isVisible?: boolean;
+}
+
 interface RealTimeMetricsProps {
   selectedProducts: string[];
   selectedVehicles: string[];
   routes: any[];
+  nodes?: NetworkNode[];
   weatherData?: {
     temperature: number;
     humidity: number;
   };
 }
 
-interface MetricData {
-  totalCost: number;
-  totalTime: number;
-  averageQuality: number;
-  spoilageRisk: number;
-  efficiency: number;
-  temperatureCompliance: number;
-}
-
 export function RealTimeMetrics({ 
   selectedProducts, 
   selectedVehicles, 
   routes,
+  nodes = [],
   weatherData 
 }: RealTimeMetricsProps) {
-  const [previousMetrics, setPreviousMetrics] = useState<MetricData | null>(null);
+  const [previousMetrics, setPreviousMetrics] = useState<any>(null);
   const [animationTrigger, setAnimationTrigger] = useState(0);
 
-  const currentMetrics = useMemo(() => {
-    // Calculate real-time metrics based on selected products and routes
-    let totalCost = 0;
-    let totalTime = 0;
-    let qualityScores: number[] = [];
-    let spoilageRisks: number[] = [];
-    let tempCompliance: number[] = [];
-
-    selectedProducts.forEach(productId => {
-      const product = dairyProducts.find(p => p.id === productId);
-      if (!product) return;
-
-      routes.forEach(route => {
-        // Calculate product-specific costs
-        const distance = route.distance_km || 0;
-        const baseTransportCost = distance * 15; // ₹15 per km base rate
-        
-        // Adjust cost based on product requirements
-        const tempRequirementMultiplier = product.temperatureRange.max < 5 ? 1.5 : 1.0;
-        const routeCost = baseTransportCost * tempRequirementMultiplier;
-        
-        totalCost += routeCost;
-        
-        // Calculate time including product-specific handling
-        const travelTime = distance / 40; // 40 km/h average speed
-        const handlingTime = product.shelfLife.refrigerated > 48 ? 0.5 : 1.0; // Less handling for longer shelf life
-        totalTime += (travelTime + handlingTime);
-        
-        // Calculate quality score based on temperature compliance
-        const currentTemp = weatherData?.temperature || 25;
-        const isWithinRange = currentTemp >= product.temperatureRange.min && 
-                            currentTemp <= product.temperatureRange.max;
-        
-        const qualityScore = isWithinRange ? 95 : Math.max(70, 95 - (Math.abs(currentTemp - product.temperatureRange.max) * 5));
-        qualityScores.push(qualityScore);
-        
-        // Calculate spoilage risk
-        const timeRisk = (travelTime / (product.shelfLife.refrigerated / 24)) * 100;
-        const tempRisk = isWithinRange ? 0 : Math.min(50, Math.abs(currentTemp - product.temperatureRange.max) * 10);
-        spoilageRisks.push(timeRisk + tempRisk);
-        
-        // Temperature compliance
-        tempCompliance.push(isWithinRange ? 100 : Math.max(0, 100 - (Math.abs(currentTemp - product.temperatureRange.max) * 20)));
-      });
-    });
-
-    const metrics: MetricData = {
-      totalCost: totalCost,
-      totalTime: totalTime,
-      averageQuality: qualityScores.length > 0 ? qualityScores.reduce((a, b) => a + b, 0) / qualityScores.length : 0,
-      spoilageRisk: spoilageRisks.length > 0 ? spoilageRisks.reduce((a, b) => a + b, 0) / spoilageRisks.length : 0,
-      efficiency: Math.max(0, 100 - ((totalTime * 10) + (spoilageRisks.reduce((a, b) => a + b, 0) / spoilageRisks.length || 0))),
-      temperatureCompliance: tempCompliance.length > 0 ? tempCompliance.reduce((a, b) => a + b, 0) / tempCompliance.length : 100
-    };
-
-    return metrics;
-  }, [selectedProducts, selectedVehicles, routes, weatherData]);
+  // Use dynamic metrics calculator
+  const currentMetrics = useDynamicMetrics({
+    selectedProducts,
+    selectedVehicles,
+    nodes,
+    weatherData
+  });
 
   // Trigger animation when metrics change
   useEffect(() => {
@@ -244,6 +195,21 @@ export function RealTimeMetrics({
           </CardContent>
         </Card>
       </div>
+
+      {/* Additional Dynamic Metrics */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-sm">Advanced Network Metrics</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+            <div className="text-center"><strong>{currentMetrics.networkUtilization.toFixed(0)}%</strong><br/>Network Utilization</div>
+            <div className="text-center"><strong>{currentMetrics.routeOptimality.toFixed(0)}%</strong><br/>Route Optimality</div>
+            <div className="text-center"><strong>₹{currentMetrics.costPerKm.toFixed(1)}</strong><br/>Cost per KM</div>
+            <div className="text-center"><strong>{currentMetrics.weatherImpact.toFixed(0)}%</strong><br/>Weather Impact</div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Product-specific metrics */}
       <Card>

@@ -14,7 +14,9 @@ import { useWeatherData } from '@/hooks/useWeatherData';
 import { NetworkNode } from '@/types/products';
 import { dairyProducts, vehicleTypes } from '@/data/dairyProducts';
 import { ProductManagement } from './ProductManagement';
-import { LeafletMapIntegration } from './LeafletMapIntegration';
+import { EnhancedSupplyChainMap, EnhancedMapNode } from './EnhancedSupplyChainMap';
+import { NodeManagement } from './NodeManagement';
+import { useDynamicMetrics } from './DynamicMetricsCalculator';
 import { 
   MapPin, 
   Settings, 
@@ -66,7 +68,8 @@ export function InteractiveNetworkMap({
   selectedVehicles = ['small-refrigerated-van'],
   onVehiclesChange = () => {}
 }: InteractiveNetworkMapProps) {
-  const [nodes, setNodes] = useState<(NetworkNode & { isVisible?: boolean })[]>([]);
+  const [nodes, setNodes] = useState<EnhancedMapNode[]>([]);
+  const [selectedNodeId, setSelectedNodeId] = useState<string>('');
   const [optimizedRoute, setOptimizedRoute] = useState<OptimizedRoute | null>(null);
   const [isOptimizing, setIsOptimizing] = useState(false);
   const [showOptimization, setShowOptimization] = useState(false);
@@ -80,57 +83,47 @@ export function InteractiveNetworkMap({
   });
   
   const { nodes: dairyNodes } = useDairyData();
-  const { weatherData } = useWeatherData();
+  const { weather: weatherData } = useWeatherData();
   const { toast } = useToast();
+
+  // Calculate dynamic metrics
+  const dynamicMetrics = useDynamicMetrics({
+    selectedProducts,
+    selectedVehicles,
+    nodes,
+    optimalRoute,
+    weatherData
+  });
 
   // Initialize nodes from dairy data
   useEffect(() => {
-    const networkNodes: (NetworkNode & { isVisible?: boolean })[] = dairyNodes.map(node => ({
+    const networkNodes: EnhancedMapNode[] = dairyNodes.map(node => ({
       id: node.id,
       name: node.name,
       type: node.type,
-      location: {
-        lat: node.lat,
-        lng: node.lng,
-        address: `${node.district || 'Unknown'}`,
-      },
-      capacity: { storage: node.capacity },
-      operatingHours: { 
-        open: '06:00', 
-        close: '20:00',
-        peakHours: node.type === 'farm' ? ['06:00-09:00', '17:00-20:00'] : ['08:00-18:00']
-      },
-      supportedProducts: selectedProducts,
-      temperatureCapabilities: { 
-        ambient: true, 
-        refrigerated: true, 
-        frozen: node.type === 'processing_plant' 
-      },
-      contact: {
-        person: node.contact,
-        phone: node.phone
-      },
+      lat: node.lat,
+      lng: node.lng,
+      capacity: node.capacity,
+      production: node.production,
+      district: node.district,
+      contact: node.contact,
+      phone: node.phone,
+      details: node.details ? JSON.stringify(node.details) : undefined,
       isVisible: true
     }));
 
     setNodes(networkNodes);
-  }, [dairyNodes, selectedProducts]);
+  }, [dairyNodes]);
 
-  const handleLocationAdd = (location: any) => {
-    const newNode: NetworkNode & { isVisible?: boolean } = {
-      id: `manual_${Date.now()}`,
-      name: location.name,
+  const handleMapClick = (lat: number, lng: number) => {
+    const newNode: EnhancedMapNode = {
+      id: `map_click_${Date.now()}`,
+      name: `Location ${lat.toFixed(4)}, ${lng.toFixed(4)}`,
       type: 'collection_center',
-      location: {
-        lat: location.lat,
-        lng: location.lng,
-        address: location.address,
-        placeId: location.placeId
-      },
-      capacity: { storage: 1000 },
-      operatingHours: { open: '06:00', close: '22:00' },
-      supportedProducts: selectedProducts,
-      temperatureCapabilities: { ambient: true, refrigerated: true, frozen: false },
+      lat,
+      lng,
+      capacity: 1000,
+      district: 'Unknown',
       isVisible: true
     };
     
@@ -138,7 +131,7 @@ export function InteractiveNetworkMap({
     
     toast({
       title: "Node Added",
-      description: `Added ${location.name} to the network`,
+      description: `Added location at ${lat.toFixed(4)}, ${lng.toFixed(4)} to the network`,
     });
   };
 
@@ -146,6 +139,10 @@ export function InteractiveNetworkMap({
     setNodes(prev => prev.map(node => 
       node.id === nodeId ? { ...node, isVisible: !node.isVisible } : node
     ));
+  };
+
+  const handleNodeSelect = (nodeId: string) => {
+    setSelectedNodeId(nodeId);
   };
 
   /**
@@ -200,7 +197,7 @@ export function InteractiveNetworkMap({
       // Implement Greedy Nearest Neighbor Algorithm for TSP
       const unvisited = [...visibleNodes];
       const visited: NetworkNode[] = [];
-      let currentNode = unvisited[0]; // Start from first farm if available
+      let currentNode = unvisited[0];
       unvisited.splice(0, 1);
       visited.push(currentNode);
 
@@ -211,10 +208,10 @@ export function InteractiveNetworkMap({
 
         for (const node of unvisited) {
           const distance = calculateHaversineDistance(
-            currentNode.location.lat, 
-            currentNode.location.lng,
-            node.location.lat, 
-            node.location.lng
+            currentNode.lat, 
+            currentNode.lng,
+            node.lat, 
+            node.lng
           );
           
           const travelTime = distance / 45; // Average speed 45 km/h considering road conditions
@@ -251,8 +248,8 @@ export function InteractiveNetworkMap({
       let maxSpoilageRisk = 0;
       
       const routePath = visited.map(node => ({
-        lat: node.location.lat,
-        lng: node.location.lng,
+        lat: node.lat,
+        lng: node.lng,
         name: node.name,
         type: node.type
       }));
@@ -260,10 +257,10 @@ export function InteractiveNetworkMap({
       // Calculate cumulative metrics
       for (let i = 0; i < visited.length - 1; i++) {
         const segmentDistance = calculateHaversineDistance(
-          visited[i].location.lat,
-          visited[i].location.lng,
-          visited[i + 1].location.lat,
-          visited[i + 1].location.lng
+          visited[i].lat,
+          visited[i].lng,
+          visited[i + 1].lat,
+          visited[i + 1].lng
         );
         
         totalDistance += segmentDistance;
@@ -372,6 +369,59 @@ export function InteractiveNetworkMap({
 
   return (
     <div className="space-y-6">
+      {/* Real-time Dynamic Metrics Display */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Activity className="h-5 w-5" />
+            Real-time Network Metrics
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="text-center p-3 bg-muted rounded-lg">
+              <div className="text-2xl font-bold text-green-600">₹{dynamicMetrics.totalCost.toFixed(0)}</div>
+              <div className="text-sm text-muted-foreground">Total Cost</div>
+              <div className="text-xs text-muted-foreground">₹{dynamicMetrics.costPerKm.toFixed(1)}/km</div>
+            </div>
+            <div className="text-center p-3 bg-muted rounded-lg">
+              <div className="text-2xl font-bold text-blue-600">{dynamicMetrics.totalTime.toFixed(1)}h</div>
+              <div className="text-sm text-muted-foreground">Total Time</div>
+              <div className="text-xs text-muted-foreground">{dynamicMetrics.timePerNode.toFixed(1)}h/node</div>
+            </div>
+            <div className="text-center p-3 bg-muted rounded-lg">
+              <div className="text-2xl font-bold text-purple-600">{dynamicMetrics.efficiency.toFixed(0)}%</div>
+              <div className="text-sm text-muted-foreground">Efficiency</div>
+              <div className="text-xs text-muted-foreground">Overall performance</div>
+            </div>
+            <div className="text-center p-3 bg-muted rounded-lg">
+              <div className="text-2xl font-bold text-orange-600">{dynamicMetrics.spoilageRisk.toFixed(1)}%</div>
+              <div className="text-sm text-muted-foreground">Spoilage Risk</div>
+              <div className="text-xs text-muted-foreground">Quality impact</div>
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
+            <div className="text-center p-2 bg-blue-50 rounded">
+              <div className="text-lg font-bold">{dynamicMetrics.networkUtilization.toFixed(0)}%</div>
+              <div className="text-xs text-muted-foreground">Network Utilization</div>
+            </div>
+            <div className="text-center p-2 bg-green-50 rounded">
+              <div className="text-lg font-bold">{dynamicMetrics.temperatureCompliance.toFixed(0)}%</div>
+              <div className="text-xs text-muted-foreground">Temp Compliance</div>
+            </div>
+            <div className="text-center p-2 bg-purple-50 rounded">
+              <div className="text-lg font-bold">{dynamicMetrics.qualityRetention.toFixed(0)}%</div>
+              <div className="text-xs text-muted-foreground">Quality Retention</div>
+            </div>
+            <div className="text-center p-2 bg-orange-50 rounded">
+              <div className="text-lg font-bold">{dynamicMetrics.weatherImpact.toFixed(0)}%</div>
+              <div className="text-xs text-muted-foreground">Weather Impact</div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Optimization Controls */}
       <Card>
         <CardHeader>
@@ -513,8 +563,9 @@ export function InteractiveNetworkMap({
       </Card>
 
       <Tabs defaultValue="map" className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="map">Network Map</TabsTrigger>
+          <TabsTrigger value="nodes">Node Management</TabsTrigger>
           <TabsTrigger value="products">Product & Vehicle Management</TabsTrigger>
         </TabsList>
 
@@ -532,60 +583,27 @@ export function InteractiveNetworkMap({
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <LeafletMapIntegration
-                onLocationSelect={handleLocationAdd}
-                existingLocations={visibleNodes.map(node => ({
-                  id: node.id,
-                  name: node.name,
-                  lat: node.location.lat,
-                  lng: node.location.lng,
-                  type: node.type
-                }))}
-                optimizedRoute={optimizedRoute?.path || []}
-                showRouteDistance={!!optimizedRoute}
-                routeDistance={optimizedRoute?.totalDistance || 0}
-                routeCost={optimizedRoute?.totalCost || 0}
+              <EnhancedSupplyChainMap
+                nodes={nodes}
+                onMapClick={handleMapClick}
+                isAddingNode={false}
+                center={[12.9716, 77.5946]}
+                zoom={8}
+                height="500px"
+                optimalRoute={optimizedRoute}
+                selectedNodeId={selectedNodeId}
+                onNodeSelect={handleNodeSelect}
               />
             </CardContent>
           </Card>
+        </TabsContent>
 
-          {/* Node Management */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Network Nodes</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ScrollArea className="h-64">
-                <div className="space-y-2">
-                  {nodes.map((node) => (
-                    <div key={node.id} className="flex items-center justify-between p-2 border rounded">
-                      <div className="flex items-center gap-2">
-                        <span className="text-lg">
-                          {node.type === 'farm' ? '🐄' : 
-                           node.type === 'collection_center' ? '🏭' :
-                           node.type === 'processing_plant' ? '⚙️' :
-                           node.type === 'distributor' ? '📦' : '🏪'}
-                        </span>
-                        <div>
-                          <div className="font-medium">{node.name}</div>
-                          <div className="text-sm text-muted-foreground">
-                            {node.type.replace('_', ' ')} • {node.capacity.storage}L capacity
-                          </div>
-                        </div>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => toggleNodeVisibility(node.id)}
-                      >
-                        {node.isVisible ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              </ScrollArea>
-            </CardContent>
-          </Card>
+        <TabsContent value="nodes">
+          <NodeManagement
+            nodes={nodes}
+            onNodesChange={setNodes}
+            onNodeVisibilityToggle={toggleNodeVisibility}
+          />
         </TabsContent>
 
         <TabsContent value="products">
