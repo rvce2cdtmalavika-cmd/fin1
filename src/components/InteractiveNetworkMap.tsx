@@ -91,7 +91,7 @@ export function InteractiveNetworkMap({
     selectedProducts,
     selectedVehicles,
     nodes,
-    optimalRoute,
+    optimalRoute: optimizedRoute,
     weatherData
   });
 
