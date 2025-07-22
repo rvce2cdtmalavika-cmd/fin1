@@ -175,6 +175,17 @@ class DairyService {
     return data;
   }
 
+  async addTransportRoute(route: Omit<TransportRoute, 'id'>): Promise<TransportRoute> {
+    const { data, error } = await supabase
+      .from('transport_routes')
+      .insert([route])
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  }
+
   // Demo scenarios
   async generateOptimizedRoutes(): Promise<TransportRoute[]> {
     const [farms, centers, plants] = await Promise.all([
