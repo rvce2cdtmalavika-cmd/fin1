@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -410,12 +409,6 @@ export function EnhancedDataImportExport() {
                       <div className="animate-spin h-4 w-4 border-b-2 border-white mr-2"></div>
                     ) : (
                       <Upload className="h-4 w-4 mr-2" />
-                    )}
-                    {importResults.distributors && (
-                      <div className="text-yellow-600">Distributors: {importResults.distributors.length} (not imported - no database table)</div>
-                    )}
-                    {importResults.products && (
-                      <div className="text-yellow-600">Products: {importResults.products.length} (not imported - no database table)</div>
                     )}
                     {importStatus === 'processing' ? 'Processing...' : 'Import Data'}
                   </Button>
