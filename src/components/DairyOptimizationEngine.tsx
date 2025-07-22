@@ -228,9 +228,7 @@ export function DairyOptimizationEngine() {
       const plants = nodes.filter(n => n.type === 'processing_plant');
       
       // Use all available nodes as potential distributors if no specific distributor nodes exist
-      const distributors = nodes.filter(n => n.type === 'distributor').length > 0 
-        ? nodes.filter(n => n.type === 'distributor')
-        : nodes.filter(n => n.type === 'collection_center' || n.type === 'processing_plant');
+      const distributors = nodes.filter(n => n.type === 'collection_center' || n.type === 'processing_plant');
 
       // Run optimization algorithm
       const optimization = optimizeCollectionRoutes(farms, centers, plants, distributors);
@@ -309,7 +307,7 @@ export function DairyOptimizationEngine() {
   const farmCount = nodes.filter(n => n.type === 'farm').length;
   const centerCount = nodes.filter(n => n.type === 'collection_center').length;
   const plantCount = nodes.filter(n => n.type === 'processing_plant').length;
-  const distributorCount = nodes.filter(n => n.type === 'distributor').length || centerCount;
+  const distributorCount = centerCount;
 
   return (
     <div className="space-y-6">

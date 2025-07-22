@@ -691,9 +691,9 @@ export function InteractiveNetworkMap({
         <TabsContent value="products">
           <ProductManagement
             selectedProducts={selectedProducts}
-            onProductsChange={setSelectedProducts}
+            onProductsChange={onProductsChange}
             selectedVehicles={selectedVehicles}
-            onVehiclesChange={setSelectedVehicles}
+            onVehiclesChange={onVehiclesChange}
           />
         </TabsContent>
 

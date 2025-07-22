@@ -66,7 +66,7 @@ export function RealTimeMetrics({
         
         // Calculate time including product-specific handling
         const travelTime = distance / 40; // 40 km/h average speed
-        const handlingTime = product.shelfLifeHours > 48 ? 0.5 : 1.0; // Less handling for longer shelf life
+        const handlingTime = product.shelfLife.refrigerated > 48 ? 0.5 : 1.0; // Less handling for longer shelf life
         totalTime += (travelTime + handlingTime);
         
         // Calculate quality score based on temperature compliance
@@ -78,7 +78,7 @@ export function RealTimeMetrics({
         qualityScores.push(qualityScore);
         
         // Calculate spoilage risk
-        const timeRisk = (travelTime / (product.shelfLifeHours / 24)) * 100;
+        const timeRisk = (travelTime / (product.shelfLife.refrigerated / 24)) * 100;
         const tempRisk = isWithinRange ? 0 : Math.min(50, Math.abs(currentTemp - product.temperatureRange.max) * 10);
         spoilageRisks.push(timeRisk + tempRisk);
         
@@ -270,8 +270,8 @@ export function RealTimeMetrics({
                   </div>
                   <div className="space-y-1 text-xs text-muted-foreground">
                     <p>Required: {product.temperatureRange.min}°C to {product.temperatureRange.max}°C</p>
-                    <p>Shelf life: {product.shelfLifeHours}h</p>
-                    <p>Spoilage rate: {product.spoilageRatePerHour}%/h</p>
+                    <p>Shelf life: {product.shelfLife.refrigerated}h</p>
+                    <p>Spoilage rate: {product.spoilageRate.perHourRefrigerated}%/h</p>
                   </div>
                 </div>
               );

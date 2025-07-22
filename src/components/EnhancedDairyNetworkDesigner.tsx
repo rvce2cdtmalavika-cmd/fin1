@@ -72,15 +72,15 @@ export function EnhancedDairyNetworkDesigner() {
             </div>
             <div className="text-center">
               <div className="text-2xl font-bold text-orange-600 flex items-center justify-center gap-1">
-                📦 {nodes.filter(n => [...nodes].some(node => node.type === 'distributor') ? 'distributor' : 'collection_center').length}
+                📦 {nodes.filter(n => n.type === 'collection_center').length}
               </div>
-              <div className="text-sm text-muted-foreground">Distributors</div>
+              <div className="text-sm text-muted-foreground">Distribution Centers</div>
             </div>
             <div className="text-center">
               <div className="text-2xl font-bold text-red-600 flex items-center justify-center gap-1">
-                🏪 {nodes.filter(n => [...nodes].some(node => node.type === 'retail') ? 'retail' : 'collection_center').length}
+                🏪 {nodes.filter(n => n.type === 'processing_plant').length}
               </div>
-              <div className="text-sm text-muted-foreground">Retail Shops</div>
+              <div className="text-sm text-muted-foreground">Processing Plants</div>
             </div>
             <div className="text-center">
               <div className="text-2xl font-bold text-indigo-600">🛣️ {routes.length}</div>
