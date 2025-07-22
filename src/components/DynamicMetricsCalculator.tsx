@@ -208,6 +208,3 @@ function calculateHaversineDistance(lat1: number, lng1: number, lat2: number, ln
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
   return R * c;
 }
-
-// Export the hook for use in components
-export { useDynamicMetrics };
