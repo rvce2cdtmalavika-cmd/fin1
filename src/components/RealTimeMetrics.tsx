@@ -47,6 +47,7 @@ export function RealTimeMetrics({
     selectedProducts,
     selectedVehicles,
     nodes,
+    optimalRoute: null,
     weatherData
   });
 
