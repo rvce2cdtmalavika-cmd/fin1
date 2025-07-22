@@ -95,4 +95,5 @@ export interface NetworkNode {
     lat: number;
     lng: number;
   };
+  isVisible?: boolean; // Add this property for node visibility
 }

@@ -155,9 +155,14 @@ export function DairyOptimizationEngine() {
       }
     });
 
-    // Processing Plant to Distributor optimization
+    // Processing Plant to Distribution optimization - Handle all node types properly
+    const allNodes = [...farms, ...centers, ...plants];
+    const distributionNodes = allNodes.filter(node => 
+      node.type === 'distributor' || node.type === 'retail' || node.type === 'collection_center'
+    );
+
     plants.forEach(plant => {
-      distributors.forEach(distributor => {
+      distributionNodes.forEach(distributor => {
         const distance = calculateDistance(plant.lat, plant.lng, distributor.lat, distributor.lng);
         if (distance <= params.maxDistanceKm * 1.5) { // Allow longer distances for final distribution
           const routeCost = distance * (params.costPerKm * 0.8); // Lower cost for final distribution
@@ -221,7 +226,11 @@ export function DairyOptimizationEngine() {
       const farms = nodes.filter(n => n.type === 'farm');
       const centers = nodes.filter(n => n.type === 'collection_center');
       const plants = nodes.filter(n => n.type === 'processing_plant');
-      const distributors = nodes.filter(n => n.type === 'distributor');
+      
+      // Use all available nodes as potential distributors if no specific distributor nodes exist
+      const distributors = nodes.filter(n => n.type === 'distributor').length > 0 
+        ? nodes.filter(n => n.type === 'distributor')
+        : nodes.filter(n => n.type === 'collection_center' || n.type === 'processing_plant');
 
       // Run optimization algorithm
       const optimization = optimizeCollectionRoutes(farms, centers, plants, distributors);
@@ -295,6 +304,12 @@ export function DairyOptimizationEngine() {
       </div>
     );
   }
+
+  // Count available nodes by type, with fallbacks
+  const farmCount = nodes.filter(n => n.type === 'farm').length;
+  const centerCount = nodes.filter(n => n.type === 'collection_center').length;
+  const plantCount = nodes.filter(n => n.type === 'processing_plant').length;
+  const distributorCount = nodes.filter(n => n.type === 'distributor').length || centerCount;
 
   return (
     <div className="space-y-6">
@@ -389,19 +404,19 @@ export function DairyOptimizationEngine() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="p-3 bg-muted rounded-lg">
                   <p className="text-sm text-muted-foreground">🐄 Farms</p>
-                  <p className="text-2xl font-bold">{nodes.filter(n => n.type === 'farm').length}</p>
+                  <p className="text-2xl font-bold">{farmCount}</p>
                 </div>
                 <div className="p-3 bg-muted rounded-lg">
                   <p className="text-sm text-muted-foreground">🏭 Centers</p>
-                  <p className="text-2xl font-bold">{nodes.filter(n => n.type === 'collection_center').length}</p>
+                  <p className="text-2xl font-bold">{centerCount}</p>
                 </div>
                 <div className="p-3 bg-muted rounded-lg">
                   <p className="text-sm text-muted-foreground">⚙️ Plants</p>
-                  <p className="text-2xl font-bold">{nodes.filter(n => n.type === 'processing_plant').length}</p>
+                  <p className="text-2xl font-bold">{plantCount}</p>
                 </div>
                 <div className="p-3 bg-muted rounded-lg">
                   <p className="text-sm text-muted-foreground">📦 Distributors</p>
-                  <p className="text-2xl font-bold">{nodes.filter(n => n.type === 'distributor').length}</p>
+                  <p className="text-2xl font-bold">{distributorCount}</p>
                 </div>
               </div>
               

@@ -65,7 +65,19 @@ interface OptimizedRoute {
   color: string;
 }
 
-export function InteractiveNetworkMap() {
+interface InteractiveNetworkMapProps {
+  selectedProducts?: string[];
+  onProductsChange?: (products: string[]) => void;
+  selectedVehicles?: string[];
+  onVehiclesChange?: (vehicles: string[]) => void;
+}
+
+export function InteractiveNetworkMap({ 
+  selectedProducts = ['whole-milk'], 
+  onProductsChange = () => {},
+  selectedVehicles = ['refrigerated-truck'],
+  onVehiclesChange = () => {}
+}: InteractiveNetworkMapProps) {
   const mapRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
   const nodeSearchRef = useRef<HTMLInputElement>(null);
@@ -73,16 +85,14 @@ export function InteractiveNetworkMap() {
   const [searchBox, setSearchBox] = useState<any>(null);
   const [nodeSearchBox, setNodeSearchBox] = useState<any>(null);
   const [isApiLoaded, setIsApiLoaded] = useState(false);
-  const [nodes, setNodes] = useState<NetworkNode[]>([]);
+  const [nodes, setNodes] = useState<(NetworkNode & { isVisible?: boolean })[]>([]);
   const [optimizedRoutes, setOptimizedRoutes] = useState<OptimizedRoute[]>([]);
   const [selectedRoute, setSelectedRoute] = useState<OptimizedRoute | null>(null);
   const [isOptimizing, setIsOptimizing] = useState(false);
   const [showOptimization, setShowOptimization] = useState(false);
   const [selectedNode, setSelectedNode] = useState<NetworkNode | null>(null);
-  const [editingNode, setEditingNode] = useState<NetworkNode | null>(null);
+  const [editingNode, setEditingNode] = useState<(NetworkNode & { isVisible?: boolean }) | null>(null);
   const [frequentLocations, setFrequentLocations] = useState<string[]>(['Amul Dairy Store, MG Road']);
-  const [selectedProducts, setSelectedProducts] = useState<string[]>(['whole-milk']);
-  const [selectedVehicles, setSelectedVehicles] = useState<string[]>(['refrigerated-truck']);
   const [coordinateInput, setCoordinateInput] = useState({ lat: '', lng: '' });
   const [nodeCoordinateInput, setNodeCoordinateInput] = useState({ lat: '', lng: '' });
   const [constraints, setConstraints] = useState<OptimizationConstraints>({
@@ -170,7 +180,7 @@ export function InteractiveNetworkMap() {
 
         const place = places[0];
         if (place.geometry && place.geometry.location) {
-          const newNode: NetworkNode = {
+          const newNode: NetworkNode & { isVisible?: boolean } = {
             id: `search_${Date.now()}`,
             name: place.name || 'Selected Location',
             type: 'distributor',
@@ -202,7 +212,7 @@ export function InteractiveNetworkMap() {
     setMap(googleMap);
 
     // Convert dairy data to network nodes
-    const networkNodes: NetworkNode[] = dairyNodes.map(node => ({
+    const networkNodes: (NetworkNode & { isVisible?: boolean })[] = dairyNodes.map(node => ({
       id: node.id,
       name: node.name,
       type: node.type,
@@ -394,7 +404,7 @@ export function InteractiveNetworkMap() {
       return;
     }
 
-    const newNode: NetworkNode = {
+    const newNode: NetworkNode & { isVisible?: boolean } = {
       id: `coord_${Date.now()}`,
       name: `Location ${lat.toFixed(4)}, ${lng.toFixed(4)}`,
       type: 'distributor',

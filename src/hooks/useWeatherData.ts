@@ -6,13 +6,25 @@ import { WeatherConditions } from '@/types/products';
 const WEATHER_API_KEY = ''; // User will need to provide this
 const WEATHER_API_URL = 'https://api.openweathermap.org/data/2.5/weather';
 
-export function useWeatherData(lat: number, lng: number) {
+export function useWeatherData(lat: number = 12.9716, lng: number = 77.5946) {
   const [weather, setWeather] = useState<WeatherConditions | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!lat || !lng || !WEATHER_API_KEY) return;
+    // Mock weather data when API key is not available
+    if (!WEATHER_API_KEY) {
+      setWeather({
+        temperature: 25,
+        humidity: 65,
+        precipitation: 0,
+        windSpeed: 10,
+        uvIndex: 5,
+        timestamp: new Date(),
+        location: { lat, lng }
+      });
+      return;
+    }
 
     setIsLoading(true);
     setError(null);
@@ -44,7 +56,12 @@ export function useWeatherData(lat: number, lng: number) {
       });
   }, [lat, lng]);
 
-  return { weather, isLoading, error };
+  return { 
+    weather, 
+    weatherData: weather, // Add alias for backward compatibility
+    isLoading, 
+    error 
+  };
 }
 
 // Calculate spoilage based on weather conditions

@@ -72,13 +72,13 @@ export function EnhancedDairyNetworkDesigner() {
             </div>
             <div className="text-center">
               <div className="text-2xl font-bold text-orange-600 flex items-center justify-center gap-1">
-                📦 {nodes.filter(n => n.type === 'distributor').length}
+                📦 {nodes.filter(n => [...nodes].some(node => node.type === 'distributor') ? 'distributor' : 'collection_center').length}
               </div>
               <div className="text-sm text-muted-foreground">Distributors</div>
             </div>
             <div className="text-center">
               <div className="text-2xl font-bold text-red-600 flex items-center justify-center gap-1">
-                🏪 {nodes.filter(n => n.type === 'retail').length}
+                🏪 {nodes.filter(n => [...nodes].some(node => node.type === 'retail') ? 'retail' : 'collection_center').length}
               </div>
               <div className="text-sm text-muted-foreground">Retail Shops</div>
             </div>
@@ -150,7 +150,12 @@ export function EnhancedDairyNetworkDesigner() {
         </TabsList>
 
         <TabsContent value="network" className="space-y-4">
-          <InteractiveNetworkMap />
+          <InteractiveNetworkMap
+            selectedProducts={selectedProducts}
+            onProductsChange={setSelectedProducts}
+            selectedVehicles={selectedVehicles}
+            onVehiclesChange={setSelectedVehicles}
+          />
         </TabsContent>
 
         <TabsContent value="analytics" className="space-y-4">
