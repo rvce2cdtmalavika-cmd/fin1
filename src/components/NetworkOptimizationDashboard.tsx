@@ -18,7 +18,8 @@ import {
   TrendingUp,
   Clock,
   DollarSign,
-  AlertTriangle
+  AlertTriangle,
+  Eye
 } from 'lucide-react';
 
 interface NetworkNode {
