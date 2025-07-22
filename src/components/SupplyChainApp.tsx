@@ -19,9 +19,9 @@ export function SupplyChainApp() {
               <Truck className="h-8 w-8 text-primary" />
             </div>
             <div>
-              <h1 className="text-3xl font-bold tracking-tight">Karnataka Dairy Supply Chain Optimizer</h1>
+              <h1 className="text-3xl font-bold tracking-tight">Dairy Supply Chain Optimizer</h1>
               <p className="text-muted-foreground">
-                Interactive network design and optimization platform for dairy supply chains across Karnataka
+                Advanced network design and optimization platform for efficient dairy supply chain management
               </p>
             </div>
           </div>
@@ -33,7 +33,7 @@ export function SupplyChainApp() {
             </Badge>
             <Badge variant="outline">
               <MapPin className="h-3 w-3 mr-1" />
-              Karnataka Region Focus
+              Network Analysis
             </Badge>
           </div>
         </div>
